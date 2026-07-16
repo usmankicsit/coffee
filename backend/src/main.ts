@@ -18,8 +18,31 @@ async function bootstrap() {
 
   app.useStaticAssets(uploadsDir, { prefix: '/uploads/' });
   app.use(cookieParser());
+
+  const frontendOrigins = String(
+    config.get('FRONTEND_URL', 'http://localhost:3000'),
+  )
+    .split(',')
+    .map((o) => o.trim().replace(/\/$/, ''))
+    .filter(Boolean);
+
   app.enableCors({
-    origin: config.get('FRONTEND_URL', 'http://localhost:3000'),
+    origin: (
+      origin: string | undefined,
+      callback: (err: Error | null, allow?: boolean) => void,
+    ) => {
+      // Allow same-origin / non-browser / health checks with no Origin header
+      if (!origin) {
+        callback(null, true);
+        return;
+      }
+      const normalized = origin.replace(/\/$/, '');
+      if (frontendOrigins.includes(normalized)) {
+        callback(null, true);
+        return;
+      }
+      callback(new Error(`CORS blocked for origin: ${origin}`), false);
+    },
     credentials: true,
   });
   app.useGlobalPipes(
