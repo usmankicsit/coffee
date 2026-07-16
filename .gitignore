@@ -8,3 +8,7 @@ dist/
 coverage/
 uploads/*
 !uploads/.gitkeep
+Untitled/
+public/sw.js
+public/workbox-*.js
+public/fallback-*.js

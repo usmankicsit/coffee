@@ -47,8 +47,8 @@ API: `http://localhost:3001/api`
 ### 3. Frontend
 
 ```bash
-cd frontend
-cp .env.example .env.local
+# from repo root
+cp .env.example .env.local   # set NEXT_PUBLIC_API_URL if needed
 npm install
 npm run dev
 ```
@@ -77,7 +77,6 @@ Demo menu (espresso, brew, pastries) is seeded on first backend start when `SEED
 PWA install works with a **production** frontend build (service worker is disabled in `npm run dev`):
 
 ```bash
-cd frontend
 npm run build
 npm run start
 ```
