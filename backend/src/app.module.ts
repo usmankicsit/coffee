@@ -40,6 +40,10 @@ import { UsersModule } from './users/users.module';
         username: config.get('DATABASE_USER', 'coffee'),
         password: config.get('DATABASE_PASSWORD', 'coffee'),
         database: config.get('DATABASE_NAME', 'coffee_pos'),
+        ssl:
+          config.get('DATABASE_SSL') === 'true'
+            ? { rejectUnauthorized: false }
+            : false,
         entities: [
           User,
           Category,
