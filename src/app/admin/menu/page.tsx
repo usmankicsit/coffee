@@ -6,13 +6,11 @@ import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { CustomSelect } from '@/components/CustomSelect';
 import { IconButton } from '@/components/IconButton';
 import { ListToolbar, PaginationBar } from '@/components/ListControls';
-import { api, ApiError } from '@/lib/api';
+import { api, ApiError, API_URL, authHeaders } from '@/lib/api';
 import { money } from '@/lib/format';
 import { hasCustomImage, productImageSrc } from '@/lib/product-image';
 import { usePagedList } from '@/lib/use-paged-list';
 import type { Category, Product } from '@/lib/types';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
 export default function MenuPage() {
   const [categories, setCategories] = useState<Category[]>([]);
@@ -105,6 +103,7 @@ export default function MenuPage() {
           method: 'POST',
           body,
           credentials: 'include',
+          headers: authHeaders(),
         });
         if (!res.ok) {
           const data = await res.json().catch(() => ({}));
@@ -159,6 +158,7 @@ export default function MenuPage() {
         method: 'POST',
         body,
         credentials: 'include',
+        headers: authHeaders(),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));

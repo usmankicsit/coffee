@@ -25,10 +25,13 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   private setCookie(res: Response, token: string) {
+    const secure =
+      process.env.NODE_ENV === 'production' ||
+      process.env.COOKIE_SECURE === 'true';
     res.cookie('access_token', token, {
       httpOnly: true,
-      sameSite: 'lax',
-      secure: false,
+      sameSite: secure ? 'none' : 'lax',
+      secure,
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
   }
@@ -55,7 +58,14 @@ export class AuthController {
 
   @Post('logout')
   logout(@Res({ passthrough: true }) res: Response) {
-    res.clearCookie('access_token');
+    const secure =
+      process.env.NODE_ENV === 'production' ||
+      process.env.COOKIE_SECURE === 'true';
+    res.clearCookie('access_token', {
+      httpOnly: true,
+      sameSite: secure ? 'none' : 'lax',
+      secure,
+    });
     return { ok: true };
   }
 

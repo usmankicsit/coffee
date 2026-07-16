@@ -8,28 +8,17 @@ import {
   AuthLink,
   AuthLinks,
   AuthShell,
-  DemoAccountPicker,
-  type DemoAccount,
 } from '@/components/AuthShell';
 import { homeForRole, useAuth } from '@/lib/auth-context';
 import { ApiError } from '@/lib/api';
-
-const CUSTOMER_ACCOUNT: DemoAccount[] = [
-  {
-    label: 'Demo customer',
-    hint: 'Try ordering now',
-    email: 'customer@coffee.local',
-    password: 'Customer123!',
-  },
-];
 
 function ShopLoginForm() {
   const { login, user, loading } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
   const next = searchParams.get('next') || '/shop/dashboard';
-  const [email, setEmail] = useState(CUSTOMER_ACCOUNT[0].email);
-  const [password, setPassword] = useState(CUSTOMER_ACCOUNT[0].password);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
@@ -77,15 +66,6 @@ function ShopLoginForm() {
         </AuthLinks>
       }
     >
-      <DemoAccountPicker
-        accounts={CUSTOMER_ACCOUNT}
-        activeEmail={email}
-        onPick={(account) => {
-          setEmail(account.email);
-          setPassword(account.password);
-          setError('');
-        }}
-      />
       <AuthForm
         onSubmit={onSubmit}
         submitLabel="Sign in"

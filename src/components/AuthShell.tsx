@@ -3,13 +3,6 @@
 import Link from 'next/link';
 import { FormEvent, ReactNode, useState } from 'react';
 
-export type DemoAccount = {
-  label: string;
-  hint: string;
-  email: string;
-  password: string;
-};
-
 export function AuthShell({
   brand,
   tagline,
@@ -65,35 +58,6 @@ export function AuthShell({
           {footer && <div className="auth-footer">{footer}</div>}
         </div>
       </main>
-    </div>
-  );
-}
-
-export function DemoAccountPicker({
-  accounts,
-  onPick,
-  activeEmail,
-}: {
-  accounts: DemoAccount[];
-  onPick: (account: DemoAccount) => void;
-  activeEmail?: string;
-}) {
-  return (
-    <div className="demo-accounts">
-      <p className="demo-accounts-label">Quick fill demo account</p>
-      <div className="demo-account-row">
-        {accounts.map((account) => (
-          <button
-            key={account.email}
-            type="button"
-            className={`demo-account-btn${activeEmail === account.email ? ' active' : ''}`}
-            onClick={() => onPick(account)}
-          >
-            <strong>{account.label}</strong>
-            <span>{account.hint}</span>
-          </button>
-        ))}
-      </div>
     </div>
   );
 }

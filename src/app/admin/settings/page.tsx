@@ -2,11 +2,9 @@
 
 import { FormEvent, useEffect, useState } from 'react';
 import { AppShell } from '@/components/AppShell';
-import { api, ApiError } from '@/lib/api';
+import { api, ApiError, API_URL, authHeaders } from '@/lib/api';
 import { mediaUrl } from '@/lib/media';
 import type { ShopSettings } from '@/lib/types';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
 export default function SettingsPage() {
   const [form, setForm] = useState({
@@ -79,6 +77,7 @@ export default function SettingsPage() {
         method: 'POST',
         body,
         credentials: 'include',
+        headers: authHeaders(),
       });
       if (!res.ok) throw new Error('Logo upload failed');
       const data = (await res.json()) as ShopSettings;

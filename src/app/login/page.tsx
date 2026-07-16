@@ -8,32 +8,15 @@ import {
   AuthLink,
   AuthLinks,
   AuthShell,
-  DemoAccountPicker,
-  type DemoAccount,
 } from '@/components/AuthShell';
 import { homeForRole, useAuth } from '@/lib/auth-context';
 import { ApiError } from '@/lib/api';
 
-const STAFF_ACCOUNTS: DemoAccount[] = [
-  {
-    label: 'Admin',
-    hint: 'Full shop control',
-    email: 'admin@coffee.local',
-    password: 'Admin123!',
-  },
-  {
-    label: 'Cashier',
-    hint: 'POS & orders',
-    email: 'cashier@coffee.local',
-    password: 'Cashier123!',
-  },
-];
-
 export default function LoginPage() {
   const { login, user, loading } = useAuth();
   const router = useRouter();
-  const [email, setEmail] = useState(STAFF_ACCOUNTS[0].email);
-  const [password, setPassword] = useState(STAFF_ACCOUNTS[0].password);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
@@ -66,7 +49,7 @@ export default function LoginPage() {
       brand="Brew & Bean"
       tagline="Staff workspace"
       title="Staff sign in"
-      subtitle="Choose a role below or enter your credentials."
+      subtitle="Enter your staff email and password to continue."
       variant="staff"
       footer={
         <AuthLinks>
@@ -79,15 +62,6 @@ export default function LoginPage() {
         </AuthLinks>
       }
     >
-      <DemoAccountPicker
-        accounts={STAFF_ACCOUNTS}
-        activeEmail={email}
-        onPick={(account) => {
-          setEmail(account.email);
-          setPassword(account.password);
-          setError('');
-        }}
-      />
       <AuthForm
         onSubmit={onSubmit}
         submitLabel="Sign in to workspace"

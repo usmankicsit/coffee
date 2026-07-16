@@ -8,7 +8,7 @@ import {
   useMemo,
   useState,
 } from 'react';
-import { api } from './api';
+import { api, setAccessToken } from './api';
 import type { User } from './types';
 
 interface AuthContextValue {
@@ -42,6 +42,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(me);
     } catch {
       setUser(null);
+      setAccessToken(null);
     } finally {
       setLoading(false);
     }
@@ -52,10 +53,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [refresh]);
 
   const login = useCallback(async (email: string, password: string) => {
-    const result = await api<{ user: User }>('/auth/login', {
+    const result = await api<{ user: User; accessToken: string }>('/auth/login', {
       method: 'POST',
       body: JSON.stringify({ email, password }),
     });
+    setAccessToken(result.accessToken);
     setUser(result.user);
     return result.user;
   }, []);
@@ -69,10 +71,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       address: string;
       city?: string;
     }) => {
-      const result = await api<{ user: User }>('/auth/register', {
-        method: 'POST',
-        body: JSON.stringify(payload),
-      });
+      const result = await api<{ user: User; accessToken: string }>(
+        '/auth/register',
+        {
+          method: 'POST',
+          body: JSON.stringify(payload),
+        },
+      );
+      setAccessToken(result.accessToken);
       setUser(result.user);
       return result.user;
     },
@@ -80,7 +86,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 
   const logout = useCallback(async () => {
-    await api('/auth/logout', { method: 'POST' });
+    try {
+      await api('/auth/logout', { method: 'POST' });
+    } catch {
+      /* ignore */
+    }
+    setAccessToken(null);
     setUser(null);
   }, []);
 
