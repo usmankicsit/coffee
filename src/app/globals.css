@@ -460,6 +460,39 @@ button {
   color: var(--muted);
 }
 
+.pos-hardware-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  max-width: min(100%, 520px);
+}
+
+.printer-status {
+  font-size: 0.85rem;
+  color: var(--muted);
+  padding: 0.35rem 0.65rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.printer-status.on {
+  color: #c8e6c4;
+  border-color: rgba(111, 158, 106, 0.45);
+  background: rgba(111, 158, 106, 0.18);
+}
+
+.pos-pref {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.85rem;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
 .btn {
   display: inline-flex;
   align-items: center;

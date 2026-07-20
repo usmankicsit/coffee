@@ -1,4 +1,9 @@
 import { money } from './format';
+import {
+  isPrinterConnected,
+  printReceiptWithDrawer,
+  tryReconnectPosPrinter,
+} from './pos-printer';
 import type { Order, ShopSettings } from './types';
 
 function buildInvoiceHtml(
@@ -80,7 +85,7 @@ function escapeHtml(value: string) {
     .replace(/"/g, '&quot;');
 }
 
-export function printInvoice(order: Order, shop?: ShopSettings | null) {
+function browserPrintInvoice(order: Order, shop?: ShopSettings | null) {
   const html = buildInvoiceHtml(order, shop, true);
   const win = window.open('', '_blank', 'width=720,height=900');
   if (!win) {
@@ -90,6 +95,42 @@ export function printInvoice(order: Order, shop?: ShopSettings | null) {
   win.document.open();
   win.document.write(html);
   win.document.close();
+}
+
+/**
+ * Print invoice: thermal printer + cash drawer when connected,
+ * otherwise browser print dialog.
+ */
+export async function printInvoice(
+  order: Order,
+  shop?: ShopSettings | null,
+  options?: { openDrawer?: boolean },
+) {
+  const openDrawer = options?.openDrawer ?? order.paymentMethod === 'CASH';
+
+  if (!isPrinterConnected()) {
+    await tryReconnectPosPrinter();
+  }
+
+  if (isPrinterConnected()) {
+    try {
+      await printReceiptWithDrawer(order, shop, { openDrawer });
+      return;
+    } catch (err) {
+      console.error(err);
+      const msg =
+        err instanceof Error ? err.message : 'Thermal print failed';
+      if (
+        !window.confirm(
+          `${msg}\n\nOpen the browser print dialog instead?`,
+        )
+      ) {
+        return;
+      }
+    }
+  }
+
+  browserPrintInvoice(order, shop);
 }
 
 export function downloadInvoice(order: Order, shop?: ShopSettings | null) {

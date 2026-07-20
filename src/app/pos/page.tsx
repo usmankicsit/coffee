@@ -7,6 +7,17 @@ import { ProductRatingBadge, ProductSellingTag } from '@/components/ProductBadge
 import { api, ApiError } from '@/lib/api';
 import { money } from '@/lib/format';
 import { printInvoice, downloadInvoice } from '@/lib/print-invoice';
+import {
+  connectPosPrinter,
+  disconnectPosPrinter,
+  getPrinterPrefs,
+  isPrinterConnected,
+  isWebSerialSupported,
+  openCashDrawerOnly,
+  setPrinterPrefs,
+  tryReconnectPosPrinter,
+  type PrinterPrefs,
+} from '@/lib/pos-printer';
 import { productImageSrc } from '@/lib/product-image';
 import { usePagedList } from '@/lib/use-paged-list';
 import type {
@@ -27,6 +38,14 @@ export default function PosPage() {
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [lastOrder, setLastOrder] = useState<Order | null>(null);
+  const [printerReady, setPrinterReady] = useState(false);
+  const [prefs, setPrefs] = useState<PrinterPrefs>(DEFAULT_SAFE_PREFS);
+  const [printerMsg, setPrinterMsg] = useState('');
+
+  useEffect(() => {
+    setPrefs(getPrinterPrefs());
+    tryReconnectPosPrinter().then((ok) => setPrinterReady(ok));
+  }, []);
 
   useEffect(() => {
     Promise.all([
@@ -97,6 +116,41 @@ export default function PosPage() {
     );
   }
 
+  async function handleConnectPrinter() {
+    setPrinterMsg('');
+    try {
+      await connectPosPrinter();
+      setPrinterReady(true);
+      setPrinterMsg('Printer connected. Cash drawer will open with Cash sales / Print.');
+    } catch (err) {
+      setPrinterReady(false);
+      setPrinterMsg(
+        err instanceof Error ? err.message : 'Could not connect printer',
+      );
+    }
+  }
+
+  async function handleDisconnectPrinter() {
+    await disconnectPosPrinter();
+    setPrinterReady(false);
+    setPrinterMsg('Printer disconnected.');
+  }
+
+  async function handleTestDrawer() {
+    setPrinterMsg('');
+    try {
+      if (!isPrinterConnected()) {
+        const ok = await tryReconnectPosPrinter();
+        setPrinterReady(ok);
+        if (!ok) throw new Error('Connect the printer first.');
+      }
+      await openCashDrawerOnly();
+      setPrinterMsg('Cash drawer kick sent.');
+    } catch (err) {
+      setPrinterMsg(err instanceof Error ? err.message : 'Drawer test failed');
+    }
+  }
+
   async function checkout(paymentMethod: PaymentMethod) {
     if (!cart.length) return;
     setBusy(true);
@@ -116,6 +170,30 @@ export default function PosPage() {
       setLastOrder(order);
       const refreshed = await api<Product[]>('/products/menu');
       setProducts(refreshed);
+
+      const p = getPrinterPrefs();
+      const shouldPrint =
+        p.autoPrintOnCash &&
+        (paymentMethod === 'CASH' || paymentMethod === 'CARD');
+      const shouldDrawer =
+        paymentMethod === 'CASH' && p.openDrawerOnCash;
+
+      if (shouldPrint || shouldDrawer) {
+        try {
+          if (!isPrinterConnected()) {
+            await tryReconnectPosPrinter();
+          }
+          if (isPrinterConnected()) {
+            await printInvoice(order, shop, {
+              openDrawer: shouldDrawer,
+            });
+          } else if (shouldPrint) {
+            await printInvoice(order, shop, { openDrawer: false });
+          }
+        } catch {
+          /* sale already succeeded — print errors are non-fatal */
+        }
+      }
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Checkout failed');
     } finally {
@@ -130,7 +208,68 @@ export default function PosPage() {
           <h1>Point of Sale</h1>
           <p>{shop?.name || 'Coffee Shop'} — tap items to add to cart</p>
         </div>
+        <div className="pos-hardware-bar">
+          {isWebSerialSupported() ? (
+            <>
+              <span
+                className={`printer-status${printerReady ? ' on' : ''}`}
+                title={
+                  printerReady
+                    ? 'Thermal printer connected'
+                    : 'No printer connected'
+                }
+              >
+                {printerReady ? 'Printer linked' : 'Printer off'}
+              </span>
+              {printerReady ? (
+                <button className="btn" type="button" onClick={handleDisconnectPrinter}>
+                  Disconnect
+                </button>
+              ) : (
+                <button
+                  className="btn btn-primary"
+                  type="button"
+                  onClick={handleConnectPrinter}
+                >
+                  Connect printer
+                </button>
+              )}
+              <button className="btn" type="button" onClick={handleTestDrawer}>
+                Test drawer
+              </button>
+              <label className="pos-pref">
+                <input
+                  type="checkbox"
+                  checked={prefs.autoPrintOnCash}
+                  onChange={(e) =>
+                    setPrefs(
+                      setPrinterPrefs({ autoPrintOnCash: e.target.checked }),
+                    )
+                  }
+                />
+                Auto print
+              </label>
+              <label className="pos-pref">
+                <input
+                  type="checkbox"
+                  checked={prefs.openDrawerOnCash}
+                  onChange={(e) =>
+                    setPrefs(
+                      setPrinterPrefs({ openDrawerOnCash: e.target.checked }),
+                    )
+                  }
+                />
+                Open drawer on Cash
+              </label>
+            </>
+          ) : (
+            <span className="muted-note">
+              Use Chrome/Edge on this PC to connect the receipt printer.
+            </span>
+          )}
+        </div>
       </div>
+      {printerMsg && <div className="success-banner">{printerMsg}</div>}
       {error && <div className="error">{error}</div>}
       {lastOrder && (
         <div className="success-banner">
@@ -139,7 +278,11 @@ export default function PosPage() {
           <button
             className="btn btn-primary"
             style={{ marginLeft: '0.75rem' }}
-            onClick={() => printInvoice(lastOrder, shop)}
+            onClick={() =>
+              void printInvoice(lastOrder, shop, {
+                openDrawer: lastOrder.paymentMethod === 'CASH',
+              })
+            }
           >
             Print invoice
           </button>
@@ -301,3 +444,10 @@ export default function PosPage() {
     </AppShell>
   );
 }
+
+const DEFAULT_SAFE_PREFS: PrinterPrefs = {
+  autoPrintOnCash: true,
+  openDrawerOnCash: true,
+  openDrawerOnPrint: true,
+  paperWidth: 42,
+};

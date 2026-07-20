@@ -16,7 +16,11 @@ export function InvoiceActions({
       <IconButton
         label="Print invoice"
         icon="print"
-        onClick={() => printInvoice(order, shop)}
+        onClick={() => {
+          void printInvoice(order, shop, {
+            openDrawer: order.paymentMethod === 'CASH',
+          });
+        }}
       />
       <IconButton
         label="Download invoice"
