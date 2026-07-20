@@ -1,13 +1,20 @@
 import {
   buildDrawerOnlyEscPos,
   buildReceiptEscPos,
+  buildTestPrintEscPos,
 } from './escpos';
 import type { Order, ShopSettings } from './types';
 
 type SerialPortLike = {
   readable: ReadableStream<Uint8Array> | null;
   writable: WritableStream<Uint8Array> | null;
-  open: (options: { baudRate: number }) => Promise<void>;
+  open: (options: {
+    baudRate: number;
+    dataBits?: number;
+    stopBits?: number;
+    parity?: string;
+    bufferSize?: number;
+  }) => Promise<void>;
   close: () => Promise<void>;
   getInfo?: () => { usbVendorId?: number; usbProductId?: number };
 };
@@ -27,14 +34,16 @@ export type PrinterPrefs = {
   autoPrintOnCash: boolean;
   openDrawerOnCash: boolean;
   openDrawerOnPrint: boolean;
-  paperWidth: 42 | 32;
+  paperWidth: 48 | 42 | 32;
+  baudRate: number;
 };
 
 const DEFAULT_PREFS: PrinterPrefs = {
   autoPrintOnCash: true,
   openDrawerOnCash: true,
   openDrawerOnPrint: true,
-  paperWidth: 42,
+  paperWidth: 48,
+  baudRate: 115200, // Ztech IT-800 / POS80 clones usually use 115200
 };
 
 let connectedPort: SerialPortLike | null = null;
@@ -68,21 +77,45 @@ async function writeBytes(port: SerialPortLike, data: Uint8Array) {
   if (!port.writable) throw new Error('Printer port is not writable');
   const writer = port.writable.getWriter();
   try {
-    await writer.write(data);
+    // Chunk writes — some USB-serial adapters drop large buffers
+    const CHUNK = 64;
+    for (let i = 0; i < data.length; i += CHUNK) {
+      await writer.write(data.subarray(i, i + CHUNK));
+      await new Promise((r) => setTimeout(r, 5));
+    }
   } finally {
     writer.releaseLock();
   }
 }
 
-/** Ask user to pick the USB/serial thermal printer (Chrome / Edge). */
+async function openPort(port: SerialPortLike, baudRate: number) {
+  await port.open({
+    baudRate,
+    dataBits: 8,
+    stopBits: 1,
+    parity: 'none',
+    bufferSize: 255,
+  });
+}
+
+/** Ask user to pick the USB thermal printer (Chrome / Edge). */
 export async function connectPosPrinter(): Promise<void> {
   if (!navigator.serial) {
     throw new Error(
       'Web Serial is not supported. Use Chrome or Edge on the POS computer.',
     );
   }
+  if (connectedPort) {
+    try {
+      await connectedPort.close();
+    } catch {
+      /* ignore */
+    }
+    connectedPort = null;
+  }
+  const baudRate = getPrinterPrefs().baudRate;
   const port = await navigator.serial.requestPort();
-  await port.open({ baudRate: 9600 });
+  await openPort(port, baudRate);
   connectedPort = port;
 }
 
@@ -96,18 +129,22 @@ export async function disconnectPosPrinter(): Promise<void> {
   connectedPort = null;
 }
 
-/** Try to reopen a previously granted port without a picker. */
+/** Reopen a previously allowed port. */
 export async function tryReconnectPosPrinter(): Promise<boolean> {
   if (!navigator.serial) return false;
   try {
     const ports = await navigator.serial.getPorts();
     if (!ports.length) return false;
+    if (connectedPort?.writable) return true;
     const port = ports[0];
-    if (!port.writable) {
-      await port.open({ baudRate: 9600 });
+    const baudRate = getPrinterPrefs().baudRate;
+    try {
+      await openPort(port, baudRate);
+    } catch {
+      // Port may already be open from a previous page session
     }
     connectedPort = port;
-    return true;
+    return Boolean(connectedPort.writable);
   } catch {
     return false;
   }
@@ -126,7 +163,7 @@ export async function sendToPrinter(data: Uint8Array): Promise<void> {
 }
 
 /**
- * Sequence: open cash drawer (optional) → print receipt → cut paper.
+ * Print receipt (ASCII ESC/POS), cut, then open cash drawer.
  */
 export async function printReceiptWithDrawer(
   order: Order,
@@ -138,6 +175,7 @@ export async function printReceiptWithDrawer(
   const payload = buildReceiptEscPos(order, shop, {
     openDrawer,
     cut: true,
+    width: prefs.paperWidth,
   });
   await sendToPrinter(payload);
 }
@@ -145,3 +183,9 @@ export async function printReceiptWithDrawer(
 export async function openCashDrawerOnly(): Promise<void> {
   await sendToPrinter(buildDrawerOnlyEscPos());
 }
+
+export async function testPrintReceipt(): Promise<void> {
+  await sendToPrinter(buildTestPrintEscPos());
+}
+
+export const BAUD_OPTIONS = [9600, 19200, 38400, 57600, 115200] as const;

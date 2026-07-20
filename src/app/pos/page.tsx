@@ -8,6 +8,7 @@ import { api, ApiError } from '@/lib/api';
 import { money } from '@/lib/format';
 import { printInvoice, downloadInvoice } from '@/lib/print-invoice';
 import {
+  BAUD_OPTIONS,
   connectPosPrinter,
   disconnectPosPrinter,
   getPrinterPrefs,
@@ -15,6 +16,7 @@ import {
   isWebSerialSupported,
   openCashDrawerOnly,
   setPrinterPrefs,
+  testPrintReceipt,
   tryReconnectPosPrinter,
   type PrinterPrefs,
 } from '@/lib/pos-printer';
@@ -151,6 +153,30 @@ export default function PosPage() {
     }
   }
 
+  async function handleTestPrint() {
+    setPrinterMsg('');
+    try {
+      if (!isPrinterConnected()) {
+        const ok = await tryReconnectPosPrinter();
+        setPrinterReady(ok);
+        if (!ok) throw new Error('Connect the printer first.');
+      }
+      await testPrintReceipt();
+      setPrinterMsg(
+        'Test print sent. If paper is blank, flip the thermal roll (shiny side toward print head).',
+      );
+    } catch (err) {
+      setPrinterMsg(err instanceof Error ? err.message : 'Test print failed');
+    }
+  }
+
+  async function handleBaudChange(baudRate: number) {
+    setPrefs(setPrinterPrefs({ baudRate }));
+    setPrinterMsg(
+      `Baud set to ${baudRate}. Click Disconnect, then Connect printer again.`,
+    );
+  }
+
   async function checkout(paymentMethod: PaymentMethod) {
     if (!cart.length) return;
     setBusy(true);
@@ -237,6 +263,22 @@ export default function PosPage() {
               <button className="btn" type="button" onClick={handleTestDrawer}>
                 Test drawer
               </button>
+              <button className="btn" type="button" onClick={handleTestPrint}>
+                Test print
+              </button>
+              <label className="pos-pref">
+                Baud
+                <select
+                  value={prefs.baudRate}
+                  onChange={(e) => handleBaudChange(Number(e.target.value))}
+                >
+                  {BAUD_OPTIONS.map((b) => (
+                    <option key={b} value={b}>
+                      {b}
+                    </option>
+                  ))}
+                </select>
+              </label>
               <label className="pos-pref">
                 <input
                   type="checkbox"
@@ -449,5 +491,6 @@ const DEFAULT_SAFE_PREFS: PrinterPrefs = {
   autoPrintOnCash: true,
   openDrawerOnCash: true,
   openDrawerOnPrint: true,
-  paperWidth: 42,
+  paperWidth: 48,
+  baudRate: 115200,
 };
