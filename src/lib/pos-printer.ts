@@ -2,6 +2,7 @@ import {
   buildDrawerOnlyEscPos,
   buildReceiptEscPos,
   buildTestPrintEscPos,
+  getReceiptSiteUrl,
 } from './escpos';
 import type { Order, ShopSettings } from './types';
 
@@ -329,7 +330,6 @@ export async function openCashDrawerOnly(): Promise<void> {
 }
 
 export async function testPrintReceipt(): Promise<void> {
-  const { getReceiptSiteUrl } = await import('./escpos');
   await sendToPrinter(buildTestPrintEscPos(getReceiptSiteUrl()));
 }
 
