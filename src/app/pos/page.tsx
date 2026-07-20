@@ -9,11 +9,13 @@ import { money } from '@/lib/format';
 import { printInvoice, downloadInvoice } from '@/lib/print-invoice';
 import {
   BAUD_OPTIONS,
-  connectPosPrinter,
+  connectSerialPrinter,
+  connectUsbPrinter,
   disconnectPosPrinter,
   getPrinterPrefs,
   isPrinterConnected,
   isWebSerialSupported,
+  isWebUsbSupported,
   openCashDrawerOnly,
   setPrinterPrefs,
   testPrintReceipt,
@@ -121,13 +123,38 @@ export default function PosPage() {
   async function handleConnectPrinter() {
     setPrinterMsg('');
     try {
-      await connectPosPrinter();
+      // Prefer WebUSB for Ztech / POS80 — do NOT use serial Bluetooth ports
+      if (isWebUsbSupported()) {
+        const name = await connectUsbPrinter();
+        setPrinterReady(true);
+        setPrinterMsg(
+          `Connected: ${name}. Click Test print. If claim fails, remove the printer from macOS Printers & Scanners first.`,
+        );
+        return;
+      }
+      await connectSerialPrinter();
       setPrinterReady(true);
-      setPrinterMsg('Printer connected. Cash drawer will open with Cash sales / Print.');
+      setPrinterMsg('Serial printer connected.');
     } catch (err) {
       setPrinterReady(false);
       setPrinterMsg(
         err instanceof Error ? err.message : 'Could not connect printer',
+      );
+    }
+  }
+
+  async function handleConnectSerialFallback() {
+    setPrinterMsg('');
+    try {
+      await connectSerialPrinter();
+      setPrinterReady(true);
+      setPrinterMsg(
+        'Serial connected. Only pick a port named like POS80 / USB — never Bluetooth or Quantum.',
+      );
+    } catch (err) {
+      setPrinterReady(false);
+      setPrinterMsg(
+        err instanceof Error ? err.message : 'Could not connect serial port',
       );
     }
   }
@@ -235,7 +262,7 @@ export default function PosPage() {
           <p>{shop?.name || 'Coffee Shop'} — tap items to add to cart</p>
         </div>
         <div className="pos-hardware-bar">
-          {isWebSerialSupported() ? (
+          {isWebUsbSupported() || isWebSerialSupported() ? (
             <>
               <span
                 className={`printer-status${printerReady ? ' on' : ''}`}
@@ -252,13 +279,24 @@ export default function PosPage() {
                   Disconnect
                 </button>
               ) : (
-                <button
-                  className="btn btn-primary"
-                  type="button"
-                  onClick={handleConnectPrinter}
-                >
-                  Connect printer
-                </button>
+                <>
+                  <button
+                    className="btn btn-primary"
+                    type="button"
+                    onClick={handleConnectPrinter}
+                  >
+                    Connect USB printer
+                  </button>
+                  {isWebSerialSupported() && (
+                    <button
+                      className="btn"
+                      type="button"
+                      onClick={handleConnectSerialFallback}
+                    >
+                      Serial (advanced)
+                    </button>
+                  )}
+                </>
               )}
               <button className="btn" type="button" onClick={handleTestDrawer}>
                 Test drawer
@@ -493,4 +531,5 @@ const DEFAULT_SAFE_PREFS: PrinterPrefs = {
   openDrawerOnPrint: true,
   paperWidth: 48,
   baudRate: 115200,
+  transport: 'usb',
 };
