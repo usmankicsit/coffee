@@ -484,6 +484,15 @@ button {
   background: rgba(111, 158, 106, 0.18);
 }
 
+.pos-pref {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.85rem;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
 .pos-pref select {
   background: var(--bg);
   border: 1px solid var(--border);
