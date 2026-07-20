@@ -1,3 +1,4 @@
+import { getReceiptSiteUrl } from './escpos';
 import { money } from './format';
 import {
   isPrinterConnected,
@@ -13,6 +14,9 @@ function buildInvoiceHtml(
 ) {
   const shopName = shop?.name || 'Brew & Bean';
   const currency = shop?.currency || 'PKR';
+  const siteUrl = getReceiptSiteUrl().replace(/\/$/, '');
+  const menuUrl = `${siteUrl}/menu`;
+  const qrImg = `https://api.qrserver.com/v1/create-qr-code/?size=160x160&margin=8&data=${encodeURIComponent(menuUrl)}`;
   const rows = (order.items || [])
     .map(
       (item) => `
@@ -31,28 +35,36 @@ function buildInvoiceHtml(
   <meta charset="utf-8" />
   <title>Invoice ${escapeHtml(order.orderNumber)}</title>
   <style>
-    body { font-family: Georgia, 'Times New Roman', serif; color: #1a1410; margin: 24px; }
-    h1 { margin: 0 0 4px; font-size: 28px; }
-    .muted { color: #666; font-size: 13px; }
-    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-    th, td { padding: 8px 4px; border-bottom: 1px solid #ddd; font-size: 14px; }
-    th { text-align: left; color: #555; font-size: 12px; text-transform: uppercase; }
-    .totals { margin-top: 16px; width: 260px; margin-left: auto; }
-    .totals div { display: flex; justify-content: space-between; padding: 4px 0; }
-    .totals .grand { font-weight: bold; font-size: 18px; border-top: 2px solid #1a1410; padding-top: 8px; margin-top: 6px; }
-    .badge { display: inline-block; padding: 2px 8px; border: 1px solid #999; border-radius: 4px; font-size: 12px; }
-    @media print { body { margin: 0; } }
+    body { font-family: Arial, Helvetica, sans-serif; color: #111; margin: 0; padding: 16px; max-width: 420px; }
+    h1 { margin: 0 0 4px; font-size: 22px; text-align: center; }
+    .sub { text-align: center; color: #555; font-size: 12px; margin-bottom: 12px; }
+    .muted { color: #666; font-size: 12px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+    th, td { padding: 6px 2px; border-bottom: 1px solid #ddd; font-size: 13px; }
+    th { text-align: left; color: #555; font-size: 11px; text-transform: uppercase; }
+    .totals { margin-top: 12px; }
+    .totals div { display: flex; justify-content: space-between; padding: 3px 0; font-size: 13px; }
+    .totals .grand { font-weight: bold; font-size: 16px; border-top: 2px solid #111; padding-top: 8px; margin-top: 6px; }
+    .qr { text-align: center; margin-top: 20px; padding-top: 12px; border-top: 1px dashed #999; }
+    .qr img { display: block; margin: 8px auto; width: 140px; height: 140px; }
+    .badge { display: inline-block; padding: 2px 8px; border: 1px solid #999; border-radius: 4px; font-size: 11px; }
+    @media print {
+      body { margin: 0; padding: 8px; }
+      .no-print { display: none; }
+    }
   </style>
 </head>
 <body>
   <h1>${escapeHtml(shopName)}</h1>
-  <div class="muted">Invoice / Receipt</div>
+  <div class="sub">Tax Invoice / Receipt</div>
+  ${shop?.phone ? `<div class="sub muted">${escapeHtml(shop.phone)}</div>` : ''}
+  ${shop?.address ? `<div class="sub muted">${escapeHtml(shop.address)}</div>` : ''}
   <p>
     <strong>${escapeHtml(order.orderNumber)}</strong>
     <span class="badge">${escapeHtml(order.source || 'POS')}</span><br/>
     ${new Date(order.createdAt).toLocaleString()}<br/>
-    Customer: ${escapeHtml(order.createdBy?.name || 'Walk-in')} (${escapeHtml(order.createdBy?.email || '—')})<br/>
-    Payment: ${escapeHtml(order.paymentMethod)} · Status: ${escapeHtml(order.status)}
+    Customer: ${escapeHtml(order.createdBy?.name || 'Walk-in')}<br/>
+    Payment: ${escapeHtml(order.paymentMethod)} · ${escapeHtml(order.status)}
     ${order.note ? `<br/>Note: ${escapeHtml(order.note)}` : ''}
   </p>
   <table>
@@ -71,7 +83,12 @@ function buildInvoiceHtml(
     <div><span>Tax</span><span>${money(order.tax, currency)}</span></div>
     <div class="grand"><span>Total</span><span>${money(order.total, currency)}</span></div>
   </div>
-  <p class="muted" style="margin-top:32px">Thank you for choosing ${escapeHtml(shopName)}.</p>
+  <div class="qr">
+    <div><strong>Scan for menu &amp; online orders</strong></div>
+    <img src="${qrImg}" alt="QR code to ${escapeHtml(menuUrl)}" width="140" height="140" />
+    <div class="muted">${escapeHtml(menuUrl)}</div>
+    <div class="muted" style="margin-top:8px">Thank you for choosing ${escapeHtml(shopName)}</div>
+  </div>
   ${autoPrint ? '<script>window.onload = function(){ window.print(); }</script>' : ''}
 </body>
 </html>`;
@@ -87,7 +104,7 @@ function escapeHtml(value: string) {
 
 function browserPrintInvoice(order: Order, shop?: ShopSettings | null) {
   const html = buildInvoiceHtml(order, shop, true);
-  const win = window.open('', '_blank', 'width=720,height=900');
+  const win = window.open('', '_blank', 'width=480,height=900');
   if (!win) {
     alert('Please allow pop-ups to print the invoice.');
     return;

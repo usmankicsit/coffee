@@ -134,11 +134,14 @@ async function writeSerial(port: SerialPortLike, data: Uint8Array) {
 }
 
 async function writeUsb(device: UsbDeviceLike, data: Uint8Array) {
-  const CHUNK = 64;
+  // Smaller chunks + longer delay — POS80 clones drop data if flooded
+  const CHUNK = 32;
   for (let i = 0; i < data.length; i += CHUNK) {
     await device.transferOut(usbOutEndpoint, data.subarray(i, i + CHUNK));
-    await new Promise((r) => setTimeout(r, 5));
+    await new Promise((r) => setTimeout(r, 15));
   }
+  // Let the print buffer finish before cut/drawer
+  await new Promise((r) => setTimeout(r, 300));
 }
 
 function pickUsbInterface(device: UsbDeviceLike) {
@@ -326,7 +329,8 @@ export async function openCashDrawerOnly(): Promise<void> {
 }
 
 export async function testPrintReceipt(): Promise<void> {
-  await sendToPrinter(buildTestPrintEscPos());
+  const { getReceiptSiteUrl } = await import('./escpos');
+  await sendToPrinter(buildTestPrintEscPos(getReceiptSiteUrl()));
 }
 
 export const BAUD_OPTIONS = [9600, 19200, 38400, 57600, 115200] as const;
