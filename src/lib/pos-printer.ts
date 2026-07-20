@@ -4,6 +4,10 @@ import {
   buildTestPrintEscPos,
   getReceiptSiteUrl,
 } from './escpos';
+import {
+  buildRasterReceiptEscPos,
+  buildRasterTestEscPos,
+} from './receipt-raster';
 import type { Order, ShopSettings } from './types';
 
 type SerialPortLike = {
@@ -317,12 +321,21 @@ export async function printReceiptWithDrawer(
 ): Promise<void> {
   const prefs = getPrinterPrefs();
   const openDrawer = options?.openDrawer ?? prefs.openDrawerOnPrint;
-  const payload = buildReceiptEscPos(order, shop, {
-    openDrawer,
-    cut: true,
-    width: prefs.paperWidth,
-  });
-  await sendToPrinter(payload);
+  try {
+    const payload = await buildRasterReceiptEscPos(order, shop, {
+      openDrawer,
+      cut: true,
+    });
+    await sendToPrinter(payload);
+  } catch (err) {
+    console.warn('Raster print failed, trying text ESC/POS', err);
+    const payload = buildReceiptEscPos(order, shop, {
+      openDrawer,
+      cut: true,
+      width: prefs.paperWidth,
+    });
+    await sendToPrinter(payload);
+  }
 }
 
 export async function openCashDrawerOnly(): Promise<void> {
@@ -330,7 +343,11 @@ export async function openCashDrawerOnly(): Promise<void> {
 }
 
 export async function testPrintReceipt(): Promise<void> {
-  await sendToPrinter(buildTestPrintEscPos(getReceiptSiteUrl()));
+  try {
+    await sendToPrinter(await buildRasterTestEscPos());
+  } catch {
+    await sendToPrinter(buildTestPrintEscPos(getReceiptSiteUrl()));
+  }
 }
 
 export const BAUD_OPTIONS = [9600, 19200, 38400, 57600, 115200] as const;

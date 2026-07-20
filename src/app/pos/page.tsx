@@ -190,7 +190,7 @@ export default function PosPage() {
       }
       await testPrintReceipt();
       setPrinterMsg(
-        'Test print sent. If paper is blank, flip the thermal roll (shiny side toward print head).',
+        'Test print sent (image mode). You should see text + a black bar + QR. If still blank, flip the thermal paper roll.',
       );
     } catch (err) {
       setPrinterMsg(err instanceof Error ? err.message : 'Test print failed');
