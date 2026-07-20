@@ -1,15 +1,14 @@
 import type { Order, ShopSettings } from './types';
 
 /**
- * ESC/POS for Ztech IT-800 / POS80 (80mm).
- * ASCII + CR/LF, large headers, Epson QR — clones often print blank with UTF-8.
+ * Minimal ESC/POS for Ztech IT-800 / POS80.
+ * Keep commands tiny — fancy init/raster often yields blank paper + feed only.
  */
 
 const ESC = 0x1b;
 const GS = 0x1d;
-const FS = 0x1c;
 
-function concat(...chunks: Uint8Array[]): Uint8Array {
+export function concat(...chunks: Uint8Array[]): Uint8Array {
   const total = chunks.reduce((n, c) => n + c.length, 0);
   const out = new Uint8Array(total);
   let offset = 0;
@@ -23,13 +22,16 @@ function concat(...chunks: Uint8Array[]): Uint8Array {
 function toAscii(text: string): string {
   return text
     .normalize('NFKD')
-    .replace(/[^\x20-\x7E]/g, '');
+    .replace(/[^\x20-\x7E]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
-function encodeAscii(text: string): Uint8Array {
-  const s = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').replace(/\n/g, '\r\n');
-  const out = new Uint8Array(s.length);
-  for (let i = 0; i < s.length; i++) out[i] = s.charCodeAt(i) & 0x7f;
+/** LF only (0x0A). CR breaks some POS80 clones. */
+function encodeLines(lines: string[]): Uint8Array {
+  const text = lines.map((l) => toAscii(l)).join('\n') + '\n';
+  const out = new Uint8Array(text.length);
+  for (let i = 0; i < text.length; i++) out[i] = text.charCodeAt(i) & 0x7f;
   return out;
 }
 
@@ -38,13 +40,11 @@ function moneyAscii(value: number | string): string {
   return `Rs ${n}`;
 }
 
-/** Public site URL for QR (customers scan receipt → website). */
 export function getReceiptSiteUrl(): string {
   const fromEnv = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '');
   if (fromEnv) return fromEnv;
   if (typeof window !== 'undefined' && window.location?.origin) {
     const origin = window.location.origin.replace(/\/$/, '');
-    // Prefer live site when testing on localhost so QR is useful for customers
     if (origin.includes('localhost') || origin.includes('127.0.0.1')) {
       return 'https://coffee-vm1s.vercel.app';
     }
@@ -53,111 +53,70 @@ export function getReceiptSiteUrl(): string {
   return 'https://coffee-vm1s.vercel.app';
 }
 
+/** Only ESC @ — anything more can blank some clones. */
 export function initPrinter(): Uint8Array {
-  return concat(
-    new Uint8Array([ESC, 0x40]), // reset
-    new Uint8Array([ESC, 0x53]), // standard mode (cancel page mode)
-    new Uint8Array([FS, 0x2e]), // cancel Chinese character mode (FS .)
-    new Uint8Array([ESC, 0x74, 0x00]), // code page PC437
-    new Uint8Array([ESC, 0x52, 0x00]), // international character set USA
-    new Uint8Array([ESC, 0x4d, 0x00]), // Font A
-    new Uint8Array([ESC, 0x61, 0x00]), // left align
-    new Uint8Array([ESC, 0x32]), // default line spacing
-    new Uint8Array([ESC, 0x21, 0x00]), // normal size
-  );
+  return new Uint8Array([ESC, 0x40]);
 }
 
 export function openCashDrawerCommand(): Uint8Array {
-  // Try drawer pin 2 and pin 5 (some cables use either)
   return concat(
-    new Uint8Array([ESC, 0x70, 0x00, 0x19, 0xfa]),
-    new Uint8Array([ESC, 0x70, 0x01, 0x19, 0xfa]),
+    new Uint8Array([ESC, 0x70, 0x00, 0x40, 0x50]),
+    new Uint8Array([ESC, 0x70, 0x01, 0x40, 0x50]),
   );
 }
 
 export function cutPaper(): Uint8Array {
+  // Feed then cut
   return concat(
-    new Uint8Array([ESC, 0x64, 0x04]), // feed 4 lines
-    new Uint8Array([GS, 0x56, 0x00]), // full cut
+    new Uint8Array([ESC, 0x64, 0x06]),
+    new Uint8Array([GS, 0x56, 0x41, 0x03]),
   );
 }
 
-function setAlign(n: 0 | 1 | 2): Uint8Array {
-  return new Uint8Array([ESC, 0x61, n]);
+function padPair(left: string, right: string, width: number): string {
+  const l = toAscii(left).slice(0, width - 1);
+  const r = toAscii(right).slice(0, width - l.length - 1);
+  const spaces = Math.max(1, width - l.length - r.length);
+  return l + ' '.repeat(spaces) + r;
 }
 
-function setSize(flags: number): Uint8Array {
-  return new Uint8Array([ESC, 0x21, flags]);
+function center(text: string, width: number): string {
+  const t = toAscii(text).slice(0, width);
+  const pad = Math.max(0, Math.floor((width - t.length) / 2));
+  return ' '.repeat(pad) + t;
 }
 
-function textLine(text: string): Uint8Array {
-  return encodeAscii(`${toAscii(text)}\n`);
-}
-
-function pairLine(left: string, right: string, width: number): Uint8Array {
-  const l = toAscii(left);
-  const r = toAscii(right);
-  const space = Math.max(1, width - l.length - r.length);
-  return encodeAscii(`${l}${' '.repeat(space)}${r}\n`);
-}
-
-function divider(width: number): Uint8Array {
-  return encodeAscii(`${'='.repeat(width)}\n`);
-}
-
-/** Epson QR code (GS ( k) — works on most POS80 / IT-800 clones. */
-function qrCodeEscPos(data: string, moduleSize = 5): Uint8Array {
-  const bytes: number[] = [];
-  for (let i = 0; i < data.length; i++) {
-    bytes.push(data.charCodeAt(i) & 0x7f);
-  }
+/** Epson QR (optional — skip if printer ignores it). */
+export function qrCodeEscPos(data: string, moduleSize = 4): Uint8Array {
+  const bytes = new Uint8Array(data.length);
+  for (let i = 0; i < data.length; i++) bytes[i] = data.charCodeAt(i) & 0x7f;
   const storeLen = bytes.length + 3;
-  const pL = storeLen & 0xff;
-  const pH = (storeLen >> 8) & 0xff;
-
   return concat(
-    setAlign(1),
-    // QR Model 2
+    new Uint8Array([ESC, 0x61, 0x01]), // center
     new Uint8Array([GS, 0x28, 0x6b, 0x04, 0x00, 0x31, 0x41, 0x32, 0x00]),
-    // Module size 1-16
     new Uint8Array([GS, 0x28, 0x6b, 0x03, 0x00, 0x31, 0x43, moduleSize]),
-    // Error correction L
     new Uint8Array([GS, 0x28, 0x6b, 0x03, 0x00, 0x31, 0x45, 0x30]),
-    // Store data
-    new Uint8Array([GS, 0x28, 0x6b, pL, pH, 0x31, 0x50, 0x30]),
-    new Uint8Array(bytes),
-    // Print QR
+    new Uint8Array([
+      GS,
+      0x28,
+      0x6b,
+      storeLen & 0xff,
+      (storeLen >> 8) & 0xff,
+      0x31,
+      0x50,
+      0x30,
+    ]),
+    bytes,
     new Uint8Array([GS, 0x28, 0x6b, 0x03, 0x00, 0x31, 0x51, 0x30]),
-    setAlign(0),
-    encodeAscii('\n'),
+    new Uint8Array([ESC, 0x61, 0x00]),
+    new Uint8Array([0x0a]),
   );
 }
 
-export function buildTestPrintEscPos(siteUrl?: string): Uint8Array {
-  const url = siteUrl || getReceiptSiteUrl();
-  const width = 48;
-  return concat(
-    initPrinter(),
-    setAlign(1),
-    setSize(0x30), // double width + height
-    textLine('BREW & BEAN'),
-    setSize(0x00),
-    textLine('PRINTER TEST OK'),
-    setAlign(0),
-    divider(width),
-    textLine('If you see this text, print works.'),
-    textLine(new Date().toLocaleString('en-GB')),
-    divider(width),
-    setAlign(1),
-    textLine('Scan for menu'),
-    qrCodeEscPos(url, 5),
-    textLine(toAscii(url).slice(0, width)),
-    setAlign(0),
-    encodeAscii('\n\n'),
-    cutPaper(),
-  );
-}
-
+/**
+ * Simple text receipt — primary path for Cash / Print.
+ * No UTF-8, no fancy fonts, no raster.
+ */
 export function buildReceiptEscPos(
   order: Order,
   shop?: ShopSettings | null,
@@ -166,86 +125,108 @@ export function buildReceiptEscPos(
     cut?: boolean;
     width?: number;
     siteUrl?: string;
+    includeQr?: boolean;
   },
 ): Uint8Array {
+  const width = options?.width ?? 42;
   const shopName = toAscii(shop?.name || 'Brew & Bean') || 'Brew & Bean';
-  const width = options?.width ?? 48;
-  const openDrawer = options?.openDrawer ?? false;
-  const cut = options?.cut ?? true;
-  const siteUrl = options?.siteUrl || getReceiptSiteUrl();
-  const menuUrl = `${siteUrl.replace(/\/$/, '')}/menu`;
+  const siteUrl = (options?.siteUrl || getReceiptSiteUrl()).replace(/\/$/, '');
+  const menuUrl = `${siteUrl}/menu`;
+  const includeQr = options?.includeQr !== false;
 
-  const chunks: Uint8Array[] = [initPrinter()];
-
-  // Header
-  chunks.push(setAlign(1));
-  chunks.push(setSize(0x30));
-  chunks.push(textLine(shopName));
-  chunks.push(setSize(0x00));
-  chunks.push(textLine('TAX INVOICE / RECEIPT'));
-  if (shop?.phone) chunks.push(textLine(toAscii(`Tel: ${shop.phone}`)));
-  if (shop?.address) {
-    const addr = toAscii(shop.address);
-    for (let i = 0; i < addr.length; i += width) {
-      chunks.push(textLine(addr.slice(i, i + width)));
-    }
-  }
-  chunks.push(setAlign(0));
-  chunks.push(divider(width));
-
-  // Meta
-  chunks.push(textLine(`Order : ${toAscii(order.orderNumber)}`));
-  chunks.push(
-    textLine(`Date  : ${toAscii(new Date(order.createdAt).toLocaleString('en-GB'))}`),
-  );
-  chunks.push(
-    textLine(`Cust  : ${toAscii(order.createdBy?.name || 'Walk-in')}`),
-  );
-  chunks.push(
-    textLine(
-      `Pay   : ${toAscii(order.paymentMethod)}  ${toAscii(order.status)}`,
-    ),
-  );
-  if (order.note) chunks.push(textLine(`Note  : ${toAscii(order.note)}`));
-  chunks.push(divider(width));
-  chunks.push(pairLine('Item', 'Amount', width));
-  chunks.push(encodeAscii(`${'-'.repeat(width)}\n`));
+  const lines: string[] = [];
+  lines.push(center(shopName, width));
+  lines.push(center('TAX INVOICE / RECEIPT', width));
+  if (shop?.phone) lines.push(center(toAscii(shop.phone), width));
+  if (shop?.address) lines.push(center(toAscii(shop.address).slice(0, width), width));
+  lines.push('-'.repeat(width));
+  lines.push(`Order: ${toAscii(order.orderNumber)}`);
+  lines.push(`Date : ${toAscii(new Date(order.createdAt).toLocaleString('en-GB'))}`);
+  lines.push(`Cust : ${toAscii(order.createdBy?.name || 'Walk-in')}`);
+  lines.push(`Pay  : ${toAscii(order.paymentMethod)}`);
+  lines.push('-'.repeat(width));
 
   for (const item of order.items || []) {
-    const name = toAscii(item.productName);
-    chunks.push(textLine(name));
-    chunks.push(
-      pairLine(
-        `  ${item.quantity} x ${moneyAscii(item.unitPrice)}`,
+    lines.push(toAscii(item.productName).slice(0, width));
+    lines.push(
+      padPair(
+        ` ${item.quantity} x ${moneyAscii(item.unitPrice)}`,
         moneyAscii(item.lineTotal),
         width,
       ),
     );
   }
 
-  chunks.push(divider(width));
-  chunks.push(pairLine('Subtotal', moneyAscii(order.subtotal), width));
-  chunks.push(pairLine('Tax', moneyAscii(order.tax), width));
-  chunks.push(setSize(0x08)); // emphasized
-  chunks.push(pairLine('TOTAL', moneyAscii(order.total), width));
-  chunks.push(setSize(0x00));
-  chunks.push(divider(width));
+  lines.push('-'.repeat(width));
+  lines.push(padPair('Subtotal', moneyAscii(order.subtotal), width));
+  lines.push(padPair('Tax', moneyAscii(order.tax), width));
+  lines.push(padPair('TOTAL', moneyAscii(order.total), width));
+  lines.push('-'.repeat(width));
+  lines.push(center('Scan QR for menu', width));
+  lines.push('');
 
-  // QR → website / menu
-  chunks.push(setAlign(1));
-  chunks.push(textLine('Scan for menu & orders'));
-  chunks.push(qrCodeEscPos(menuUrl, 5));
-  chunks.push(textLine(toAscii(menuUrl).slice(0, width)));
-  chunks.push(textLine('Thank you! Visit again'));
-  chunks.push(setAlign(0));
-  chunks.push(encodeAscii('\n\n'));
+  const chunks: Uint8Array[] = [
+    initPrinter(),
+    // Double-size title line via ESC !
+    new Uint8Array([ESC, 0x21, 0x30]),
+    encodeLines([center(shopName, 21)]),
+    new Uint8Array([ESC, 0x21, 0x00]),
+    encodeLines(lines.slice(1)),
+  ];
 
-  if (cut) chunks.push(cutPaper());
-  if (openDrawer) chunks.push(openCashDrawerCommand());
+  if (includeQr) {
+    chunks.push(encodeLines([center('Menu online:', width)]));
+    chunks.push(qrCodeEscPos(menuUrl, 4));
+    chunks.push(encodeLines([center(menuUrl.replace('https://', ''), width)]));
+  }
+
+  chunks.push(encodeLines(['', center('Thank you!', width), '', '']));
+
+  if (options?.cut !== false) chunks.push(cutPaper());
+  if (options?.openDrawer) chunks.push(openCashDrawerCommand());
 
   return concat(...chunks);
 }
 
+export function buildTestPrintEscPos(siteUrl?: string): Uint8Array {
+  const url = (siteUrl || getReceiptSiteUrl()).replace(/\/$/, '') + '/menu';
+  return concat(
+    initPrinter(),
+    new Uint8Array([ESC, 0x21, 0x30]),
+    encodeLines(['  PRINT TEST OK  ']),
+    new Uint8Array([ESC, 0x21, 0x00]),
+    encodeLines([
+      '--------------------------',
+      'If you can read this,',
+      'thermal print is working.',
+      toAscii(new Date().toLocaleString('en-GB')),
+      '--------------------------',
+      'QR -> website menu:',
+      '',
+    ]),
+    qrCodeEscPos(url, 4),
+    encodeLines(['', url.replace('https://', ''), '', '']),
+    cutPaper(),
+  );
+}
+
 export function buildDrawerOnlyEscPos(): Uint8Array {
   return concat(initPrinter(), openCashDrawerCommand());
+}
+
+/** Absolute minimal bytes — for debugging blank paper. */
+export function buildHelloEscPos(): Uint8Array {
+  return concat(
+    new Uint8Array([ESC, 0x40]),
+    encodeLines([
+      'HELLO FROM BREW AND BEAN',
+      '123456789012345678901234',
+      'ABCDEFGHIJKLMNOPQRSTUVWX',
+      '************************',
+      '',
+      '',
+      '',
+    ]),
+    new Uint8Array([ESC, 0x64, 0x05]),
+  );
 }

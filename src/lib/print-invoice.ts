@@ -48,10 +48,7 @@ function buildInvoiceHtml(
     .qr { text-align: center; margin-top: 20px; padding-top: 12px; border-top: 1px dashed #999; }
     .qr img { display: block; margin: 8px auto; width: 140px; height: 140px; }
     .badge { display: inline-block; padding: 2px 8px; border: 1px solid #999; border-radius: 4px; font-size: 11px; }
-    @media print {
-      body { margin: 0; padding: 8px; }
-      .no-print { display: none; }
-    }
+    @media print { body { margin: 0; padding: 8px; } }
   </style>
 </head>
 <body>
@@ -85,7 +82,7 @@ function buildInvoiceHtml(
   </div>
   <div class="qr">
     <div><strong>Scan for menu &amp; online orders</strong></div>
-    <img src="${qrImg}" alt="QR code to ${escapeHtml(menuUrl)}" width="140" height="140" />
+    <img src="${qrImg}" alt="QR code" width="140" height="140" />
     <div class="muted">${escapeHtml(menuUrl)}</div>
     <div class="muted" style="margin-top:8px">Thank you for choosing ${escapeHtml(shopName)}</div>
   </div>
@@ -102,21 +99,9 @@ function escapeHtml(value: string) {
     .replace(/"/g, '&quot;');
 }
 
-function browserPrintInvoice(order: Order, shop?: ShopSettings | null) {
-  const html = buildInvoiceHtml(order, shop, true);
-  const win = window.open('', '_blank', 'width=480,height=900');
-  if (!win) {
-    alert('Please allow pop-ups to print the invoice.');
-    return;
-  }
-  win.document.open();
-  win.document.write(html);
-  win.document.close();
-}
-
 /**
- * Print invoice: thermal printer + cash drawer when connected,
- * otherwise browser print dialog.
+ * Thermal print only — does NOT open a browser page.
+ * Use Download invoice for the HTML copy.
  */
 export async function printInvoice(
   order: Order,
@@ -129,25 +114,13 @@ export async function printInvoice(
     await tryReconnectPosPrinter();
   }
 
-  if (isPrinterConnected()) {
-    try {
-      await printReceiptWithDrawer(order, shop, { openDrawer });
-      return;
-    } catch (err) {
-      console.error(err);
-      const msg =
-        err instanceof Error ? err.message : 'Thermal print failed';
-      if (
-        !window.confirm(
-          `${msg}\n\nOpen the browser print dialog instead?`,
-        )
-      ) {
-        return;
-      }
-    }
+  if (!isPrinterConnected()) {
+    throw new Error(
+      'Printer not connected. Click “Connect USB printer” on POS first. (Do not use browser Print to the POS80 — that prints blank.)',
+    );
   }
 
-  browserPrintInvoice(order, shop);
+  await printReceiptWithDrawer(order, shop, { openDrawer });
 }
 
 export function downloadInvoice(order: Order, shop?: ShopSettings | null) {

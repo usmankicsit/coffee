@@ -1,13 +1,12 @@
 import {
   buildDrawerOnlyEscPos,
+  buildHelloEscPos,
   buildReceiptEscPos,
   buildTestPrintEscPos,
+  cutPaper,
   getReceiptSiteUrl,
+  openCashDrawerCommand,
 } from './escpos';
-import {
-  buildRasterReceiptEscPos,
-  buildRasterTestEscPos,
-} from './receipt-raster';
 import type { Order, ShopSettings } from './types';
 
 type SerialPortLike = {
@@ -124,29 +123,29 @@ export function isPrinterConnected(): boolean {
   return Boolean(serialPort?.writable) || Boolean(usbDevice?.opened);
 }
 
+async function writeUsb(device: UsbDeviceLike, data: Uint8Array) {
+  // Very small packets — POS80 USB drops large buffers (blank paper + feed only)
+  const CHUNK = 16;
+  for (let i = 0; i < data.length; i += CHUNK) {
+    await device.transferOut(usbOutEndpoint, data.subarray(i, i + CHUNK));
+    await new Promise((r) => setTimeout(r, 20));
+  }
+  await new Promise((r) => setTimeout(r, 500));
+}
+
 async function writeSerial(port: SerialPortLike, data: Uint8Array) {
   if (!port.writable) throw new Error('Printer port is not writable');
   const writer = port.writable.getWriter();
   try {
-    const CHUNK = 64;
+    const CHUNK = 16;
     for (let i = 0; i < data.length; i += CHUNK) {
       await writer.write(data.subarray(i, i + CHUNK));
-      await new Promise((r) => setTimeout(r, 5));
+      await new Promise((r) => setTimeout(r, 20));
     }
+    await new Promise((r) => setTimeout(r, 500));
   } finally {
     writer.releaseLock();
   }
-}
-
-async function writeUsb(device: UsbDeviceLike, data: Uint8Array) {
-  // Smaller chunks + longer delay — POS80 clones drop data if flooded
-  const CHUNK = 32;
-  for (let i = 0; i < data.length; i += CHUNK) {
-    await device.transferOut(usbOutEndpoint, data.subarray(i, i + CHUNK));
-    await new Promise((r) => setTimeout(r, 15));
-  }
-  // Let the print buffer finish before cut/drawer
-  await new Promise((r) => setTimeout(r, 300));
 }
 
 function pickUsbInterface(device: UsbDeviceLike) {
@@ -314,6 +313,10 @@ export async function sendToPrinter(data: Uint8Array): Promise<void> {
   throw new Error('Printer not connected.');
 }
 
+/**
+ * Cash / Print: send TEXT receipt in 3 steps so POS80 does not drop the job.
+ * 1) invoice text  2) cut  3) cash drawer
+ */
 export async function printReceiptWithDrawer(
   order: Order,
   shop?: ShopSettings | null,
@@ -321,20 +324,22 @@ export async function printReceiptWithDrawer(
 ): Promise<void> {
   const prefs = getPrinterPrefs();
   const openDrawer = options?.openDrawer ?? prefs.openDrawerOnPrint;
-  try {
-    const payload = await buildRasterReceiptEscPos(order, shop, {
-      openDrawer,
-      cut: true,
-    });
-    await sendToPrinter(payload);
-  } catch (err) {
-    console.warn('Raster print failed, trying text ESC/POS', err);
-    const payload = buildReceiptEscPos(order, shop, {
-      openDrawer,
-      cut: true,
-      width: prefs.paperWidth,
-    });
-    await sendToPrinter(payload);
+
+  // Body only (no cut/drawer yet)
+  const body = buildReceiptEscPos(order, shop, {
+    openDrawer: false,
+    cut: false,
+    width: prefs.paperWidth === 48 ? 42 : prefs.paperWidth,
+    includeQr: true,
+  });
+  await sendToPrinter(body);
+  await new Promise((r) => setTimeout(r, 400));
+
+  await sendToPrinter(cutPaper());
+  await new Promise((r) => setTimeout(r, 300));
+
+  if (openDrawer) {
+    await sendToPrinter(openCashDrawerCommand());
   }
 }
 
@@ -343,11 +348,15 @@ export async function openCashDrawerOnly(): Promise<void> {
 }
 
 export async function testPrintReceipt(): Promise<void> {
-  try {
-    await sendToPrinter(await buildRasterTestEscPos());
-  } catch {
-    await sendToPrinter(buildTestPrintEscPos(getReceiptSiteUrl()));
-  }
+  // Step 1: absolute HELLO — if this is blank, paper/head issue
+  await sendToPrinter(buildHelloEscPos());
+  await new Promise((r) => setTimeout(r, 400));
+  // Step 2: full test with QR
+  await sendToPrinter(buildTestPrintEscPos(getReceiptSiteUrl()));
+}
+
+export async function testHelloOnly(): Promise<void> {
+  await sendToPrinter(buildHelloEscPos());
 }
 
 export const BAUD_OPTIONS = [9600, 19200, 38400, 57600, 115200] as const;

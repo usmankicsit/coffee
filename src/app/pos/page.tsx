@@ -190,7 +190,7 @@ export default function PosPage() {
       }
       await testPrintReceipt();
       setPrinterMsg(
-        'Test print sent (image mode). You should see text + a black bar + QR. If still blank, flip the thermal paper roll.',
+        'Test print sent. Look for "PRINT TEST OK" / "HELLO FROM BREW AND BEAN" on paper. If still blank after flipping paper, the USB path may be wrong — tell us the result.',
       );
     } catch (err) {
       setPrinterMsg(err instanceof Error ? err.message : 'Test print failed');
@@ -236,15 +236,26 @@ export default function PosPage() {
           if (!isPrinterConnected()) {
             await tryReconnectPosPrinter();
           }
-          if (isPrinterConnected()) {
+          if (!isPrinterConnected()) {
+            setPrinterMsg(
+              'Sale saved, but printer is not connected. Click Connect USB printer, then Print invoice.',
+            );
+          } else {
             await printInvoice(order, shop, {
               openDrawer: shouldDrawer,
             });
-          } else if (shouldPrint) {
-            await printInvoice(order, shop, { openDrawer: false });
+            setPrinterMsg(
+              shouldDrawer
+                ? 'Receipt sent to printer and cash drawer opened.'
+                : 'Receipt sent to printer.',
+            );
           }
-        } catch {
-          /* sale already succeeded — print errors are non-fatal */
+        } catch (printErr) {
+          setPrinterMsg(
+            printErr instanceof Error
+              ? `Sale saved, but print failed: ${printErr.message}`
+              : 'Sale saved, but print failed.',
+          );
         }
       }
     } catch (err) {
@@ -358,11 +369,19 @@ export default function PosPage() {
           <button
             className="btn btn-primary"
             style={{ marginLeft: '0.75rem' }}
-            onClick={() =>
+            onClick={() => {
               void printInvoice(lastOrder, shop, {
                 openDrawer: lastOrder.paymentMethod === 'CASH',
               })
-            }
+                .then(() =>
+                  setPrinterMsg('Receipt sent to thermal printer.'),
+                )
+                .catch((err) =>
+                  setPrinterMsg(
+                    err instanceof Error ? err.message : 'Print failed',
+                  ),
+                );
+            }}
           >
             Print invoice
           </button>

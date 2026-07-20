@@ -19,6 +19,8 @@ export function InvoiceActions({
         onClick={() => {
           void printInvoice(order, shop, {
             openDrawer: order.paymentMethod === 'CASH',
+          }).catch((err) => {
+            alert(err instanceof Error ? err.message : 'Print failed');
           });
         }}
       />
