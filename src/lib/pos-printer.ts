@@ -43,7 +43,7 @@ type UsbDeviceLike = {
   selectConfiguration: (n: number) => Promise<void>;
   claimInterface: (n: number) => Promise<void>;
   releaseInterface: (n: number) => Promise<void>;
-  transferOut: (endpoint: number, data: BufferSource) => Promise<unknown>;
+  transferOut: (endpoint: number, data: Uint8Array) => Promise<unknown>;
   productName?: string;
   manufacturerName?: string;
 };
@@ -127,7 +127,9 @@ async function writeUsb(device: UsbDeviceLike, data: Uint8Array) {
   // Very small packets — POS80 USB drops large buffers (blank paper + feed only)
   const CHUNK = 16;
   for (let i = 0; i < data.length; i += CHUNK) {
-    await device.transferOut(usbOutEndpoint, data.subarray(i, i + CHUNK));
+    // Copy into a fresh ArrayBuffer-backed view (TS DOM BufferSource typing)
+    const chunk = Uint8Array.from(data.subarray(i, i + CHUNK));
+    await device.transferOut(usbOutEndpoint, chunk);
     await new Promise((r) => setTimeout(r, 20));
   }
   await new Promise((r) => setTimeout(r, 500));
@@ -139,7 +141,8 @@ async function writeSerial(port: SerialPortLike, data: Uint8Array) {
   try {
     const CHUNK = 16;
     for (let i = 0; i < data.length; i += CHUNK) {
-      await writer.write(data.subarray(i, i + CHUNK));
+      const chunk = Uint8Array.from(data.subarray(i, i + CHUNK));
+      await writer.write(chunk);
       await new Promise((r) => setTimeout(r, 20));
     }
     await new Promise((r) => setTimeout(r, 500));
