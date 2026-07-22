@@ -46,11 +46,11 @@ export function getReceiptSiteUrl(): string {
   if (typeof window !== 'undefined' && window.location?.origin) {
     const origin = window.location.origin.replace(/\/$/, '');
     if (origin.includes('localhost') || origin.includes('127.0.0.1')) {
-      return 'https://coffee-vm1s.vercel.app';
+      return 'https://thebrewingcottage.com';
     }
     return origin;
   }
-  return 'https://coffee-vm1s.vercel.app';
+  return 'https://thebrewingcottage.com';
 }
 
 /** Only ESC @ — anything more can blank some clones. */

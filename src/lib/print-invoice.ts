@@ -82,8 +82,9 @@ function buildInvoiceHtml(
   </div>
   <div class="qr">
     <div><strong>Scan for menu &amp; online orders</strong></div>
-    <img src="${qrImg}" alt="QR code" width="140" height="140" />
+    <img src="${qrImg}" alt="QR code to ${escapeHtml(menuUrl)}" width="140" height="140" />
     <div class="muted">${escapeHtml(menuUrl)}</div>
+    <div class="muted">thebrewingcottage.com</div>
     <div class="muted" style="margin-top:8px">Thank you for choosing ${escapeHtml(shopName)}</div>
   </div>
   ${autoPrint ? '<script>window.onload = function(){ window.print(); }</script>' : ''}

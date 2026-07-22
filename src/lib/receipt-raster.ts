@@ -272,7 +272,7 @@ export async function buildRasterTestEscPos(): Promise<Uint8Array> {
   ctx.fillStyle = '#000';
   ctx.font = 'bold 28px Arial';
   ctx.textAlign = 'center';
-  ctx.fillText('BREW & BEAN', width / 2, 50);
+  ctx.fillText('THE BREWING COTTAGE', width / 2, 50);
   ctx.font = '20px Arial';
   ctx.fillText('PRINTER TEST OK', width / 2, 90);
   // Solid black bar — proves thermal head works
