@@ -13,13 +13,13 @@ const NAME_DEFAULTS: Record<string, string> = {
   'Chunky Dynamite Fries':
     'https://images.unsplash.com/photo-1630384060421-cb20d0e0649d?auto=format&fit=crop&w=800&q=80',
   'Dragon Fries':
-    'https://images.unsplash.com/photo-1585109649139-051e4c8e0f1f?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1541592106381-b31e9677c0e5?auto=format&fit=crop&w=800&q=80',
   'Curly Fries':
-    'https://images.unsplash.com/photo-1598679253544-2c464169bdd9?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1518013431117-eb1465fa5752?auto=format&fit=crop&w=800&q=80',
   'Waffle Fries':
     'https://images.unsplash.com/photo-1528735602780-2552fd46c7af?auto=format&fit=crop&w=800&q=80',
   'Classic French Fries':
-    'https://images.unsplash.com/photo-1576107233125-222e6d1f1b9b?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1576107232684-1279f390859f?auto=format&fit=crop&w=800&q=80',
   'Habanero Wings':
     'https://images.unsplash.com/photo-1527477396000-e27163b481c2?auto=format&fit=crop&w=800&q=80',
   'BBQ Wings':
@@ -27,15 +27,15 @@ const NAME_DEFAULTS: Record<string, string> = {
   'Honey Chili Wings':
     'https://images.unsplash.com/photo-1567620832903-9fc6debc209f?auto=format&fit=crop&w=800&q=80',
   'Pesto Chicken Panini':
-    'https://images.unsplash.com/photo-1539252554453-80ab53fee1ce?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=800&q=80',
   'BBQ Chicken Panini':
-    'https://images.unsplash.com/photo-1481070414801-53daf7bc5d63?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1528736235302-52922df5c122?auto=format&fit=crop&w=800&q=80',
   'Parmesan Chicken Panini':
     'https://images.unsplash.com/photo-1509722747041-616f39b57569?auto=format&fit=crop&w=800&q=80',
   'Classic Club Sandwich':
-    'https://images.unsplash.com/photo-1528736235302-52922df5c122?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1550547660-d9450f859349?auto=format&fit=crop&w=800&q=80',
   'Grilled Chicken Sandwich':
-    'https://images.unsplash.com/photo-1550507992-eb57cf8c002f?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1606755962773-d324e0a13086?auto=format&fit=crop&w=800&q=80',
   'The Brewing Cottage Special Sandwich':
     'https://images.unsplash.com/photo-1567234669003-dce7a7a88821?auto=format&fit=crop&w=800&q=80',
   'Cowboy Burger':
@@ -59,12 +59,12 @@ const NAME_DEFAULTS: Record<string, string> = {
   'Fettuccine Alfredo':
     'https://images.unsplash.com/photo-1645112411341-6c4fd023714a?auto=format&fit=crop&w=800&q=80',
   'Penne Pomodoro':
-    'https://images.unsplash.com/photo-1598866594230-a7c1275525cd?auto=format&fit=crop&w=800&q=80',
-  Americano:
+    'https://images.unsplash.com/photo-1551183053-bf91a1d81141?auto=format&fit=crop&w=800&q=80',
+  'Americano':
     'https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?auto=format&fit=crop&w=800&q=80',
-  Cappuccino:
+  'Cappuccino':
     'https://images.unsplash.com/photo-1572442388796-11668a67e53d?auto=format&fit=crop&w=800&q=80',
-  Latte:
+  'Latte':
     'https://images.unsplash.com/photo-1561882468-9110e03e0f78?auto=format&fit=crop&w=800&q=80',
   'Doppio Espresso':
     'https://images.unsplash.com/photo-1510590337019-5ef8d3d32116?auto=format&fit=crop&w=800&q=80',
@@ -77,11 +77,11 @@ const NAME_DEFAULTS: Record<string, string> = {
   'Caramel Latte':
     'https://images.unsplash.com/photo-1461023058943-07fcbe16d735?auto=format&fit=crop&w=800&q=80',
   'Hazelnut Latte':
-    'https://images.unsplash.com/photo-1578314675249-9cbd6b4e0c1b?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1461023058943-07fcbe16d735?auto=format&fit=crop&w=800&q=80',
   'Raspberry Mocktail':
     'https://images.unsplash.com/photo-1536935338788-846bb9981813?auto=format&fit=crop&w=800&q=80',
   'Strawberry Mocktail':
-    'https://images.unsplash.com/photo-1546171753-97d47345ac87?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1551024506-0bccd828d307?auto=format&fit=crop&w=800&q=80',
   'Blueberry Mocktail':
     'https://images.unsplash.com/photo-1497534446932-c925b458314e?auto=format&fit=crop&w=800&q=80',
   'Passion Fruit Mocktail':
@@ -94,22 +94,22 @@ const NAME_DEFAULTS: Record<string, string> = {
     'https://images.unsplash.com/photo-1544145945-f90425340c7e?auto=format&fit=crop&w=800&q=80',
   'Passion Fruit Mojito':
     'https://images.unsplash.com/photo-1470337458703-46ad1756a187?auto=format&fit=crop&w=800&q=80',
-  Vanilla:
-    'https://images.unsplash.com/photo-1570197788417-0e698c1c6fbe?auto=format&fit=crop&w=800&q=80',
-  Strawberry:
-    'https://images.unsplash.com/photo-1497034825429-c343d7c6a68f?auto=format&fit=crop&w=800&q=80',
-  Chocolate:
+  'Vanilla':
     'https://images.unsplash.com/photo-1563805042-7684c019e1cb?auto=format&fit=crop&w=800&q=80',
-  Pistachio:
-    'https://images.unsplash.com/photo-1501443762994-2aa85a4b2a36?auto=format&fit=crop&w=800&q=80',
+  'Strawberry':
+    'https://images.unsplash.com/photo-1497034825429-c343d7c6a68f?auto=format&fit=crop&w=800&q=80',
+  'Chocolate':
+    'https://images.unsplash.com/photo-1562376552-0d160a2f238d?auto=format&fit=crop&w=800&q=80',
+  'Pistachio':
+    'https://images.unsplash.com/photo-1624353365286-3f8d62daad51?auto=format&fit=crop&w=800&q=80',
   'Vanilla Shake':
     'https://images.unsplash.com/photo-1572490122747-3968b75cc699?auto=format&fit=crop&w=800&q=80',
   'Strawberry Shake':
-    'https://images.unsplash.com/photo-1579954115545-a955db412ecb?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1623065422902-30a2d299bbe4?auto=format&fit=crop&w=800&q=80',
   'Chocolate Shake':
     'https://images.unsplash.com/photo-1577805947697-89e18249d767?auto=format&fit=crop&w=800&q=80',
   'Pistachio Shake':
-    'https://images.unsplash.com/photo-1579954115545-a955db412ecb?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1560008581-09826d1de69e?auto=format&fit=crop&w=800&q=80',
   'Blue Lagoon Slush':
     'https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?auto=format&fit=crop&w=800&q=80',
   'Green Apple Slush':

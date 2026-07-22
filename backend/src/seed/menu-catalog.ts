@@ -35,13 +35,13 @@ export const MENU_CATEGORIES: MenuCategorySeed[] = [
       {
         name: 'Dragon Fries',
         price: 680,
-        imageUrl: img('photo-1585109649139-051e4c8e0f1f'),
+        imageUrl: img('photo-1541592106381-b31e9677c0e5'),
         description: 'Fiery seasoned fries with dragon sauce and herbs.',
       },
       {
         name: 'Curly Fries',
         price: 450,
-        imageUrl: img('photo-1598679253544-2c464169bdd9'),
+        imageUrl: img('photo-1518013431117-eb1465fa5752'),
         description: 'Golden curly fries, perfectly seasoned and crisp.',
       },
       {
@@ -53,7 +53,7 @@ export const MENU_CATEGORIES: MenuCategorySeed[] = [
       {
         name: 'Classic French Fries',
         price: 400,
-        imageUrl: img('photo-1576107233125-222e6d1f1b9b'),
+        imageUrl: img('photo-1576107232684-1279f390859f'),
         description: 'Classic thin-cut fries, hot and golden.',
       },
     ],
@@ -89,13 +89,13 @@ export const MENU_CATEGORIES: MenuCategorySeed[] = [
       {
         name: 'Pesto Chicken Panini',
         price: 780,
-        imageUrl: img('photo-1539252554453-80ab53fee1ce'),
+        imageUrl: img('photo-1509440159596-0249088772ff'),
         description: 'Grilled panini with pesto, chicken, and melted cheese.',
       },
       {
         name: 'BBQ Chicken Panini',
         price: 780,
-        imageUrl: img('photo-1481070414801-53daf7bc5d63'),
+        imageUrl: img('photo-1528736235302-52922df5c122'),
         description: 'BBQ chicken, cheese, and crisp bread pressed hot.',
       },
       {
@@ -113,13 +113,13 @@ export const MENU_CATEGORIES: MenuCategorySeed[] = [
       {
         name: 'Classic Club Sandwich',
         price: 750,
-        imageUrl: img('photo-1528736235302-52922df5c122'),
+        imageUrl: img('photo-1550547660-d9450f859349'),
         description: 'Triple-layer club with chicken, egg, and fresh veggies.',
       },
       {
         name: 'Grilled Chicken Sandwich',
         price: 720,
-        imageUrl: img('photo-1550507992-eb57cf8c002f'),
+        imageUrl: img('photo-1606755962773-d324e0a13086'),
         description: 'Juicy grilled chicken on toasted bread with greens.',
       },
       {
@@ -209,7 +209,7 @@ export const MENU_CATEGORIES: MenuCategorySeed[] = [
       {
         name: 'Penne Pomodoro',
         price: 900,
-        imageUrl: img('photo-1598866594230-a7c1275525cd'),
+        imageUrl: img('photo-1551183053-bf91a1d81141'),
         description: 'Penne tossed in fresh pomodoro tomato sauce.',
       },
     ],
@@ -275,7 +275,7 @@ export const MENU_CATEGORIES: MenuCategorySeed[] = [
       {
         name: 'Hazelnut Latte',
         price: 540,
-        imageUrl: img('photo-1578314675249-9cbd6b4e0c1b'),
+        imageUrl: img('photo-1461023058943-07fcbe16d735'),
         description: 'Iced latte with toasted hazelnut flavor.',
       },
       {
@@ -305,7 +305,7 @@ export const MENU_CATEGORIES: MenuCategorySeed[] = [
       {
         name: 'Strawberry Mocktail',
         price: 550,
-        imageUrl: img('photo-1546171753-97d47345ac87'),
+        imageUrl: img('photo-1551024506-0bccd828d307'),
         description: 'Bright strawberry mocktail, lightly sweet.',
       },
       {
@@ -359,7 +359,7 @@ export const MENU_CATEGORIES: MenuCategorySeed[] = [
       {
         name: 'Vanilla',
         price: 350,
-        imageUrl: img('photo-1570197788417-0e698c1c6fbe'),
+        imageUrl: img('photo-1563805042-7684c019e1cb'),
         description: 'Classic creamy vanilla ice cream.',
       },
       {
@@ -371,13 +371,13 @@ export const MENU_CATEGORIES: MenuCategorySeed[] = [
       {
         name: 'Chocolate',
         price: 380,
-        imageUrl: img('photo-1563805042-7684c019e1cb'),
+        imageUrl: img('photo-1562376552-0d160a2f238d'),
         description: 'Rich chocolate ice cream.',
       },
       {
         name: 'Pistachio',
         price: 400,
-        imageUrl: img('photo-1501443762994-2aa85a4b2a36'),
+        imageUrl: img('photo-1624353365286-3f8d62daad51'),
         description: 'Nutty pistachio ice cream.',
       },
     ],
@@ -395,7 +395,7 @@ export const MENU_CATEGORIES: MenuCategorySeed[] = [
       {
         name: 'Strawberry Shake',
         price: 500,
-        imageUrl: img('photo-1579954115545-a955db412ecb'),
+        imageUrl: img('photo-1623065422902-30a2d299bbe4'),
         description: 'Creamy strawberry milkshake.',
       },
       {
@@ -407,7 +407,7 @@ export const MENU_CATEGORIES: MenuCategorySeed[] = [
       {
         name: 'Pistachio Shake',
         price: 550,
-        imageUrl: img('photo-1579954115545-a955db412ecb'),
+        imageUrl: img('photo-1560008581-09826d1de69e'),
         description: 'Smooth pistachio milkshake.',
       },
     ],

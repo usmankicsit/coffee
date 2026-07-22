@@ -243,16 +243,19 @@ export class SeedService implements OnModuleInit {
         descByName.set(item.name, item.description);
       }
     }
-    const fallback =
-      'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&w=800&q=80';
 
     const products = await this.productsRepo.find();
     let filled = 0;
     let descFilled = 0;
     for (const product of products) {
       let changed = false;
-      if (!product.imageUrl) {
-        product.imageUrl = imageByName.get(product.name) || fallback;
+      const catalogImage = imageByName.get(product.name);
+      if (catalogImage && product.imageUrl !== catalogImage) {
+        product.imageUrl = catalogImage;
+        filled += 1;
+        changed = true;
+      } else if (!product.imageUrl && catalogImage) {
+        product.imageUrl = catalogImage;
         filled += 1;
         changed = true;
       }
@@ -263,7 +266,7 @@ export class SeedService implements OnModuleInit {
       }
       if (changed) await this.productsRepo.save(product);
     }
-    if (filled) this.logger.log(`Backfilled ${filled} product images`);
+    if (filled) this.logger.log(`Synced ${filled} product images from catalog`);
     if (descFilled) {
       this.logger.log(`Backfilled ${descFilled} product descriptions`);
     }
