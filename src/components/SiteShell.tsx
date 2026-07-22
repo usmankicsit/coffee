@@ -34,7 +34,8 @@ export function SiteShell({ children }: { children: React.ReactNode }) {
   }, [pathname]);
 
   const brand = shop?.name || 'The Brewing Cottage';
-  const logo = mediaUrl(shop?.logoUrl);
+  const logo =
+    mediaUrl(shop?.logoUrl) || '/brand/brewing-cottage-logo.png';
 
   return (
     <div className="site">
@@ -42,12 +43,8 @@ export function SiteShell({ children }: { children: React.ReactNode }) {
       <header className="site-header">
         <div className="site-header-inner">
           <Link href="/" className="site-logo">
-            {logo ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={logo} alt={brand} className="site-logo-img" />
-            ) : (
-              <span className="site-logo-mark">B&B</span>
-            )}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={logo} alt={brand} className="site-logo-img" />
             <span className="site-logo-text">
               {brand}
               <small>Coffee & kitchen</small>

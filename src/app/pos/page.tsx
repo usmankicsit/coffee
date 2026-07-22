@@ -45,6 +45,7 @@ export default function PosPage() {
   const [printerReady, setPrinterReady] = useState(false);
   const [prefs, setPrefs] = useState<PrinterPrefs>(DEFAULT_SAFE_PREFS);
   const [printerMsg, setPrinterMsg] = useState('');
+  const [payOk, setPayOk] = useState('');
 
   useEffect(() => {
     setPrefs(getPrinterPrefs());
@@ -208,6 +209,7 @@ export default function PosPage() {
     if (!cart.length) return;
     setBusy(true);
     setError('');
+    setPayOk('');
     try {
       const order = await api<Order>('/orders', {
         method: 'POST',
@@ -221,6 +223,11 @@ export default function PosPage() {
       });
       setCart([]);
       setLastOrder(order);
+      setPayOk(
+        paymentMethod === 'CARD'
+          ? `Debit card payment recorded — ${order.orderNumber}`
+          : `Cash payment recorded — ${order.orderNumber}`,
+      );
       const refreshed = await api<Product[]>('/products/menu');
       setProducts(refreshed);
 
@@ -516,20 +523,27 @@ export default function PosPage() {
             </div>
             <div className="pay-row">
               <button
-                className="btn btn-primary"
+                className="btn btn-pay btn-pay-cash"
                 disabled={!cart.length || busy}
                 onClick={() => checkout('CASH')}
               >
-                Cash
+                {busy ? 'Saving…' : 'Cash'}
               </button>
               <button
-                className="btn btn-primary"
+                className="btn btn-pay btn-pay-card"
                 disabled={!cart.length || busy}
                 onClick={() => checkout('CARD')}
               >
-                Card
+                {busy ? 'Saving…' : 'Debit card'}
               </button>
             </div>
+            {payOk && <div className="success-banner">{payOk}</div>}
+            {lastOrder && (
+              <p className="muted-note">
+                Last sale: {lastOrder.orderNumber} · {lastOrder.paymentMethod === 'CARD' ? 'Debit card' : 'Cash'} ·{' '}
+                {money(lastOrder.total, shop?.currency)}
+              </p>
+            )}
             <button
               className="btn"
               disabled={!cart.length || busy}

@@ -6,6 +6,8 @@ import { BlogPost } from './blogs/blog-post.entity';
 import { BlogsModule } from './blogs/blogs.module';
 import { CategoriesModule } from './categories/categories.module';
 import { Category } from './categories/category.entity';
+import { Expense } from './expenses/expense.entity';
+import { ExpensesModule } from './expenses/expenses.module';
 import { Inventory } from './inventory/inventory.entity';
 import { InventoryModule } from './inventory/inventory.module';
 import { OrderItem } from './orders/order-item.entity';
@@ -56,6 +58,7 @@ import { UsersModule } from './users/users.module';
           OrderClaim,
           BlogPost,
           TeamMember,
+          Expense,
         ],
         synchronize: true,
       }),
@@ -73,6 +76,7 @@ import { UsersModule } from './users/users.module';
     ClaimsModule,
     BlogsModule,
     TeamModule,
+    ExpensesModule,
     SeedModule,
   ],
 })

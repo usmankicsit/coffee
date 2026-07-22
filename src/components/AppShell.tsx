@@ -5,12 +5,15 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
+import { mediaUrl } from '@/lib/media';
+import type { ShopSettings } from '@/lib/types';
 
 const staffLinks = [
   { href: '/pos', label: 'POS' },
   { href: '/orders', label: 'Orders' },
   { href: '/online-orders', label: 'Online Orders' },
   { href: '/claims', label: 'Claims' },
+  { href: '/expenses', label: 'Patti cash' },
 ];
 
 const adminLinks = [
@@ -56,6 +59,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     online: emptyBucket(),
     today: emptyBucket(),
   });
+  const [shop, setShop] = useState<ShopSettings | null>(null);
 
   const loadCounts = useCallback(async () => {
     try {
@@ -64,6 +68,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     } catch {
       /* ignore while navigating */
     }
+  }, []);
+
+  useEffect(() => {
+    api<ShopSettings>('/shop').then(setShop).catch(() => null);
   }, []);
 
   useEffect(() => {
@@ -100,6 +108,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   const links = isAdmin ? [...staffLinks, ...adminLinks] : staffLinks;
   const online = counts.online;
+  const brand = shop?.name || 'The Brewing Cottage';
+  const logo =
+    mediaUrl(shop?.logoUrl) || '/brand/brewing-cottage-logo.png';
 
   const chips = [
     { key: 'PENDING', label: 'Pending', count: online.PENDING, href: '/online-orders' },
@@ -112,8 +123,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <div className="app-shell">
       <aside className="sidebar">
         <div className="brand">
-          The Brewing Cottage
-          <span>Point of Sale</span>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={logo} alt={brand} className="brand-logo" />
+          <div className="brand-text">
+            {brand}
+            <span>Point of Sale</span>
+          </div>
         </div>
         <nav className="nav">
           {links.map((link) => (

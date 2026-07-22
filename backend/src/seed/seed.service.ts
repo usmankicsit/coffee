@@ -2,6 +2,8 @@ import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import * as bcrypt from 'bcrypt';
+import { copyFileSync, existsSync, mkdirSync } from 'fs';
+import { join } from 'path';
 import { Repository } from 'typeorm';
 import { BlogPost } from '../blogs/blog-post.entity';
 import { UserRole } from '../common/enums';
@@ -123,11 +125,21 @@ export class SeedService implements OnModuleInit {
   }
 
   private async syncShopSettings() {
+    const uploadsDir = join(process.cwd(), 'uploads');
+    const assetLogo = join(process.cwd(), 'assets', 'logo-brewing-cottage.png');
+    const uploadLogo = join(uploadsDir, 'logo-brewing-cottage.png');
+    if (existsSync(assetLogo)) {
+      if (!existsSync(uploadsDir)) mkdirSync(uploadsDir, { recursive: true });
+      if (!existsSync(uploadLogo)) {
+        copyFileSync(assetLogo, uploadLogo);
+        this.logger.log('Installed The Brewing Cottage logo in uploads');
+      }
+    }
+
     let settings = await this.shopRepo.findOne({ where: {} });
     if (!settings) {
       settings = this.shopRepo.create({
         ...SHOP_SEED,
-        logoUrl: null,
       });
       await this.shopRepo.save(settings);
       this.logger.log('Seeded shop settings');
@@ -141,6 +153,9 @@ export class SeedService implements OnModuleInit {
     settings.whatsapp = SHOP_SEED.whatsapp;
     settings.address = SHOP_SEED.address;
     settings.aboutText = SHOP_SEED.aboutText;
+    if (!settings.logoUrl && existsSync(uploadLogo)) {
+      settings.logoUrl = SHOP_SEED.logoUrl;
+    }
     await this.shopRepo.save(settings);
     this.logger.log('Updated shop settings for The Brewing Cottage');
   }

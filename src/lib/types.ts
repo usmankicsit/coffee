@@ -118,6 +118,26 @@ export interface ShopSettings {
   aboutText?: string;
 }
 
+export interface Expense {
+  id: string;
+  title: string;
+  note?: string | null;
+  amount: number | string;
+  expenseDate: string;
+  createdById: string;
+  createdBy?: User;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface ExpenseListResponse {
+  from: string;
+  to: string;
+  count: number;
+  totalAmount: number;
+  items: Expense[];
+}
+
 export interface BlogPost {
   id: string;
   title: string;

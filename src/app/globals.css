@@ -173,8 +173,27 @@ button {
   font-weight: 600;
   letter-spacing: -0.02em;
   padding: 0 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
 }
 
+.brand-logo {
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
+  border-radius: 10px;
+  background: #fff;
+  flex-shrink: 0;
+}
+
+.brand-text {
+  min-width: 0;
+  line-height: 1.15;
+  font-size: 1.05rem;
+}
+
+.brand-text span,
 .brand span {
   display: block;
   font-family: var(--font-body);
@@ -1467,6 +1486,49 @@ button {
   grid-template-columns: 1fr 1fr;
   gap: 0.5rem;
   margin-bottom: 0.75rem;
+}
+
+.btn-pay {
+  min-height: 3rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.btn-pay-cash {
+  background: #2f6b4f;
+  color: #fff;
+  border-color: #2f6b4f;
+}
+
+.btn-pay-cash:hover:not(:disabled) {
+  background: #255740;
+}
+
+.btn-pay-card {
+  background: #1f4e79;
+  color: #fff;
+  border-color: #1f4e79;
+}
+
+.btn-pay-card:hover:not(:disabled) {
+  background: #173d5f;
+}
+
+.btn-pay.active-pay {
+  outline: 2px solid #c4a574;
+  outline-offset: 2px;
+}
+
+.inline-date {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.inline-date input[type='date'] {
+  padding: 0.35rem 0.5rem;
 }
 
 .empty {

@@ -439,6 +439,7 @@ export const SHOP_SEED = {
   phone: '+92 312 8671544',
   whatsapp: '+923128671544',
   address: 'Shop No. 02, Sector B, Family B Park, DHA Phase 2, Islamabad',
+  logoUrl: '/uploads/logo-brewing-cottage.png',
   aboutText:
     'The Brewing Cottage is your neighborhood café in DHA Phase 2, Islamabad — serving coffee, comfort food, burgers, pasta, and cool drinks in a warm cottage vibe.',
 };
