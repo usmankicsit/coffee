@@ -5,14 +5,14 @@ import { PwaRegister } from '@/components/PwaRegister';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'Brew & Bean POS',
+  title: 'The Brewing Cottage',
   description: 'Coffee shop POS, online ordering, and staff tools',
-  applicationName: 'Brew & Bean',
+  applicationName: 'The Brewing Cottage',
   manifest: '/manifest.webmanifest',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
-    title: 'Brew & Bean',
+    title: 'The Brewing Cottage',
   },
   icons: {
     icon: [

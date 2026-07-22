@@ -53,7 +53,7 @@ export function PwaRegister() {
   return (
     <div className="pwa-install-banner">
       <div>
-        <strong>Install Brew & Bean</strong>
+        <strong>Install The Brewing Cottage</strong>
         <span>Add to your phone or computer for quick access</span>
       </div>
       <div className="pwa-install-actions">

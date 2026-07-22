@@ -12,7 +12,7 @@ function buildInvoiceHtml(
   shop?: ShopSettings | null,
   autoPrint = false,
 ) {
-  const shopName = shop?.name || 'Brew & Bean';
+  const shopName = shop?.name || 'The Brewing Cottage';
   const currency = shop?.currency || 'PKR';
   const siteUrl = getReceiptSiteUrl().replace(/\/$/, '');
   const menuUrl = `${siteUrl}/menu`;

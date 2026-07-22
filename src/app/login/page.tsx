@@ -46,7 +46,7 @@ export default function LoginPage() {
 
   return (
     <AuthShell
-      brand="Brew & Bean"
+      brand="The Brewing Cottage"
       tagline="Staff workspace"
       title="Staff sign in"
       subtitle="Enter your staff email and password to continue."

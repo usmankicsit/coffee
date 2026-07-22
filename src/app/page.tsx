@@ -37,7 +37,7 @@ export default function HomePage() {
       .catch(() => undefined);
   }, []);
 
-  const brand = shop?.name || 'Brew & Bean';
+  const brand = shop?.name || 'The Brewing Cottage';
 
   return (
     <SiteShell>

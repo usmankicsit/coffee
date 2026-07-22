@@ -44,7 +44,7 @@ function ShopLoginForm() {
 
   return (
     <AuthShell
-      brand="Brew & Bean"
+      brand="The Brewing Cottage"
       tagline="Customer account"
       title="Welcome back"
       subtitle="Sign in to checkout your cart and track orders."

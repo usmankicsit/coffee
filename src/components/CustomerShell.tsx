@@ -43,7 +43,7 @@ export function CustomerShell({ children }: { children: React.ReactNode }) {
     <div className="shop-shell">
       <header className="shop-header">
         <Link href="/shop/dashboard" className="shop-brand">
-          Brew & Bean
+          The Brewing Cottage
           <span>My account</span>
         </Link>
         <nav className="shop-nav">

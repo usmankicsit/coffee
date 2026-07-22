@@ -11,7 +11,7 @@ export class ShopSettings {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ default: 'Coffee Shop' })
+  @Column({ default: 'The Brewing Cottage' })
   name: string;
 
   @Column({ type: 'decimal', precision: 5, scale: 2, default: 0 })
@@ -20,13 +20,15 @@ export class ShopSettings {
   @Column({ default: 'PKR' })
   currency: string;
 
-  @Column({ default: '+92 300 1234567' })
+  @Column({ default: '+92 312 8671544' })
   phone: string;
 
-  @Column({ default: '+923001234567' })
+  @Column({ default: '+923128671544' })
   whatsapp: string;
 
-  @Column({ default: '12 MM Alam Road, Gulberg III, Lahore' })
+  @Column({
+    default: 'Shop No. 02, Sector B, Family B Park, DHA Phase 2, Islamabad',
+  })
   address: string;
 
   @Column({ type: 'varchar', length: 500, nullable: true })
@@ -35,7 +37,7 @@ export class ShopSettings {
   @Column({
     type: 'text',
     default:
-      'Brew & Bean is a neighborhood coffee shop serving carefully roasted beans, handcrafted drinks, and fresh pastries in the heart of Lahore.',
+      'The Brewing Cottage is your neighborhood café in DHA Phase 2, Islamabad — serving coffee, comfort food, burgers, pasta, and cool drinks in a warm cottage vibe.',
   })
   aboutText: string;
 

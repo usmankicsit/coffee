@@ -56,7 +56,7 @@ function ShopRegisterForm() {
 
   return (
     <AuthShell
-      brand="Brew & Bean"
+      brand="The Brewing Cottage"
       tagline="Join the shop"
       title="Create your account"
       subtitle="We need your phone and address so the shop can contact you about orders."

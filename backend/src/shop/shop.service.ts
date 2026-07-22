@@ -16,17 +16,18 @@ export class ShopService {
   async get() {
     let settings = await this.shopRepo.findOne({ where: {} });
     if (!settings) {
-      settings = await this.shopRepo.save(
+        settings = await this.shopRepo.save(
         this.shopRepo.create({
-          name: 'Coffee Shop',
-          taxPercent: 0,
+          name: 'The Brewing Cottage',
+          taxPercent: 5,
           currency: 'PKR',
-          phone: '+92 300 1234567',
-          whatsapp: '+923001234567',
-          address: '12 MM Alam Road, Gulberg III, Lahore',
+          phone: '+92 312 8671544',
+          whatsapp: '+923128671544',
+          address:
+            'Shop No. 02, Sector B, Family B Park, DHA Phase 2, Islamabad',
           logoUrl: null,
           aboutText:
-            'Brew & Bean is a neighborhood coffee shop serving carefully roasted beans, handcrafted drinks, and fresh pastries in the heart of Lahore.',
+            'The Brewing Cottage is your neighborhood café in DHA Phase 2, Islamabad — serving coffee, comfort food, burgers, pasta, and cool drinks in a warm cottage vibe.',
         }),
       );
     }

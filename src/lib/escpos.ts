@@ -129,7 +129,7 @@ export function buildReceiptEscPos(
   },
 ): Uint8Array {
   const width = options?.width ?? 42;
-  const shopName = toAscii(shop?.name || 'Brew & Bean') || 'Brew & Bean';
+  const shopName = toAscii(shop?.name || 'The Brewing Cottage') || 'The Brewing Cottage';
   const siteUrl = (options?.siteUrl || getReceiptSiteUrl()).replace(/\/$/, '');
   const menuUrl = `${siteUrl}/menu`;
   const includeQr = options?.includeQr !== false;

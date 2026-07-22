@@ -112,7 +112,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <div className="app-shell">
       <aside className="sidebar">
         <div className="brand">
-          Brew & Bean
+          The Brewing Cottage
           <span>Point of Sale</span>
         </div>
         <nav className="nav">

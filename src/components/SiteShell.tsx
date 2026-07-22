@@ -33,7 +33,7 @@ export function SiteShell({ children }: { children: React.ReactNode }) {
     setMenuOpen(false);
   }, [pathname]);
 
-  const brand = shop?.name || 'Brew & Bean';
+  const brand = shop?.name || 'The Brewing Cottage';
   const logo = mediaUrl(shop?.logoUrl);
 
   return (
@@ -133,7 +133,7 @@ export function SiteShell({ children }: { children: React.ReactNode }) {
         <div className="site-footer-grid">
           <div>
             <strong className="site-footer-brand">{brand}</strong>
-            <p>{shop?.aboutText?.slice(0, 140) || 'Handcrafted coffee in Lahore.'}</p>
+            <p>{shop?.aboutText?.slice(0, 140) || 'Café classics in DHA Phase 2, Islamabad.'}</p>
           </div>
           <div>
             <h4>Visit</h4>

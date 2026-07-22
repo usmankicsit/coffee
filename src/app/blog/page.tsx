@@ -23,7 +23,7 @@ export default function BlogListPage() {
     <SiteShell>
       <section className="site-page-hero reveal">
         <h1>Blog</h1>
-        <p>Stories, recipes, and shop news from Brew & Bean.</p>
+        <p>Stories, recipes, and shop news from The Brewing Cottage.</p>
       </section>
       <section className="site-section reveal">
         {error && <div className="error">{error}</div>}

@@ -121,7 +121,7 @@ async function renderReceiptCanvas(
   const contentW = width - pad * 2;
   const siteUrl = getReceiptSiteUrl().replace(/\/$/, '');
   const menuUrl = `${siteUrl}/menu`;
-  const shopName = shop?.name || 'Brew & Bean';
+  const shopName = shop?.name || 'The Brewing Cottage';
 
   // Measure height first with a temporary canvas height
   let y = pad;
