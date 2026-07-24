@@ -304,10 +304,37 @@ export class SeedService implements OnModuleInit {
     );
   }
 
-  /** Add missing categories/products from catalog without wiping existing menu. */
+  /** Add missing categories/products from catalog without wiping existing menu.
+   *  Also syncs prices/images for existing items matched by name within category.
+   */
   private async ensureCatalogItems() {
     let categoriesAdded = 0;
     let productsAdded = 0;
+    let productsUpdated = 0;
+
+    // Rename cold Spanish/Irish if still using hot names in Cold Coffee
+    const coldCoffee = await this.categoriesRepo.findOne({
+      where: { name: 'Cold Coffee' },
+    });
+    if (coldCoffee) {
+      const renames: Array<[string, string]> = [
+        ['Spanish Latte', 'Iced Spanish Latte'],
+        ['Irish Latte', 'Iced Irish Latte'],
+      ];
+      for (const [from, to] of renames) {
+        const coldItem = await this.productsRepo.findOne({
+          where: { name: from, categoryId: coldCoffee.id },
+        });
+        if (coldItem) {
+          const clash = await this.productsRepo.findOne({ where: { name: to } });
+          if (!clash) {
+            coldItem.name = to;
+            await this.productsRepo.save(coldItem);
+            this.logger.log(`Renamed Cold Coffee "${from}" → "${to}"`);
+          }
+        }
+      }
+    }
 
     for (const cat of MENU_CATEGORIES) {
       let category = await this.categoriesRepo.findOne({
@@ -329,9 +356,14 @@ export class SeedService implements OnModuleInit {
       }
 
       for (const item of cat.items) {
-        const existing = await this.productsRepo.findOne({
-          where: { name: item.name },
+        let existing = await this.productsRepo.findOne({
+          where: { name: item.name, categoryId: category.id },
         });
+        if (!existing) {
+          existing = await this.productsRepo.findOne({
+            where: { name: item.name },
+          });
+        }
         if (existing) {
           let changed = false;
           if (Number(existing.price) !== item.price) {
@@ -350,7 +382,10 @@ export class SeedService implements OnModuleInit {
             existing.description = item.description;
             changed = true;
           }
-          if (changed) await this.productsRepo.save(existing);
+          if (changed) {
+            await this.productsRepo.save(existing);
+            productsUpdated += 1;
+          }
           continue;
         }
 
@@ -375,9 +410,9 @@ export class SeedService implements OnModuleInit {
       }
     }
 
-    if (categoriesAdded || productsAdded) {
+    if (categoriesAdded || productsAdded || productsUpdated) {
       this.logger.log(
-        `Ensured catalog items (+${categoriesAdded} categories, +${productsAdded} products)`,
+        `Ensured catalog (+${categoriesAdded} cats, +${productsAdded} products, ~${productsUpdated} updated)`,
       );
     }
   }
