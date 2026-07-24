@@ -430,6 +430,48 @@ export const MENU_CATEGORIES: MenuCategorySeed[] = [
       },
     ],
   },
+  {
+    name: 'Dessert',
+    sortOrder: 15,
+    items: [
+      {
+        name: 'Cheese cake slice',
+        price: 600,
+        imageUrl: img('photo-1524351199678-941a58a3df50'),
+        description: 'Creamy New York–style cheesecake slice.',
+      },
+      {
+        name: 'Chocolate fudge',
+        price: 500,
+        imageUrl: img('photo-1606313564200-e75d5e30476c'),
+        description: 'Dense chocolate fudge cake with a rich finish.',
+      },
+      {
+        name: 'Brownies',
+        price: 450,
+        imageUrl: img('photo-1607920591413-4ec007729b28'),
+        description: 'Warm chocolate brownies, soft in the center.',
+      },
+      {
+        name: 'Banana bread',
+        price: 250,
+        imageUrl: img('photo-1509440159596-0249088772ff'),
+        description: 'Fresh-baked banana bread loaf slice.',
+      },
+      {
+        name: 'Molten lava',
+        price: 1200,
+        imageUrl: img('photo-1511910849309-0dffb247fb26'),
+        description: 'Hot chocolate lava cake with a molten center.',
+      },
+      {
+        name: 'Three milk',
+        price: 700,
+        imageUrl: img('photo-1464349095431-e68bc7f4e12a'),
+        description: 'Soft sponge soaked in three milks (tres leches).',
+      },
+    ],
+  },
 ];
 
 export const SHOP_SEED = {

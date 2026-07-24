@@ -88,11 +88,18 @@ export default function MenuPage() {
         {error && <div className="error">{error}</div>}
 
         <div className="site-product-grid">
-          {filtered.map((product) => (
+          {filtered.map((product, index) => (
             <article key={product.id} className="site-product-card">
               <Link href={`/menu/${product.id}`} className="site-product-media">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={productImageSrc(product)} alt={product.name} />
+                <img
+                  src={productImageSrc(product, 'thumb')}
+                  alt={product.name}
+                  width={320}
+                  height={240}
+                  loading={index < 6 ? 'eager' : 'lazy'}
+                  decoding="async"
+                />
                 <ProductSellingTag product={product} />
               </Link>
               <div className="site-product-body">

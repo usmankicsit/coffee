@@ -254,6 +254,7 @@ export class SeedService implements OnModuleInit {
 
     if (!replace) {
       await this.backfillProductMedia();
+      await this.ensureCatalogItems();
       return;
     }
 
@@ -303,6 +304,84 @@ export class SeedService implements OnModuleInit {
     );
   }
 
+  /** Add missing categories/products from catalog without wiping existing menu. */
+  private async ensureCatalogItems() {
+    let categoriesAdded = 0;
+    let productsAdded = 0;
+
+    for (const cat of MENU_CATEGORIES) {
+      let category = await this.categoriesRepo.findOne({
+        where: { name: cat.name },
+      });
+      if (!category) {
+        category = await this.categoriesRepo.save(
+          this.categoriesRepo.create({
+            name: cat.name,
+            sortOrder: cat.sortOrder,
+            isActive: true,
+          }),
+        );
+        categoriesAdded += 1;
+      } else if (category.sortOrder !== cat.sortOrder || !category.isActive) {
+        category.sortOrder = cat.sortOrder;
+        category.isActive = true;
+        await this.categoriesRepo.save(category);
+      }
+
+      for (const item of cat.items) {
+        const existing = await this.productsRepo.findOne({
+          where: { name: item.name },
+        });
+        if (existing) {
+          let changed = false;
+          if (Number(existing.price) !== item.price) {
+            existing.price = item.price;
+            changed = true;
+          }
+          if (existing.categoryId !== category.id) {
+            existing.categoryId = category.id;
+            changed = true;
+          }
+          if (existing.imageUrl !== item.imageUrl) {
+            existing.imageUrl = item.imageUrl;
+            changed = true;
+          }
+          if (existing.description !== item.description) {
+            existing.description = item.description;
+            changed = true;
+          }
+          if (changed) await this.productsRepo.save(existing);
+          continue;
+        }
+
+        const product = await this.productsRepo.save(
+          this.productsRepo.create({
+            name: item.name,
+            price: item.price,
+            categoryId: category.id,
+            imageUrl: item.imageUrl,
+            description: item.description,
+            isAvailable: true,
+          }),
+        );
+        await this.inventoryRepo.save(
+          this.inventoryRepo.create({
+            productId: product.id,
+            quantity: UNLIMITED_STOCK,
+            lowStockThreshold: 0,
+          }),
+        );
+        productsAdded += 1;
+      }
+    }
+
+    if (categoriesAdded || productsAdded) {
+      this.logger.log(
+        `Ensured catalog items (+${categoriesAdded} categories, +${productsAdded} products)`,
+      );
+    }
+  }
+
   private async backfillProductMedia() {
     const imageByName = new Map<string, string>();
     const descByName = new Map<string, string>();
@@ -350,10 +429,9 @@ export class SeedService implements OnModuleInit {
       await this.blogsRepo.clear();
       this.logger.log('Cleared old Brew & Bean blog posts');
     }
-    if ((await this.blogsRepo.count()) !== 0) return;
 
-    await this.blogsRepo.save([
-      this.blogsRepo.create({
+    const posts = [
+      {
         title: 'Welcome to The Brewing Cottage',
         slug: 'welcome-to-the-brewing-cottage',
         excerpt:
@@ -361,31 +439,63 @@ export class SeedService implements OnModuleInit {
         content:
           'The Brewing Cottage brings café classics and cottage comfort to Sector B, Family B Park in DHA Phase 2, Islamabad. From loaded fries and burgers to specialty coffee and mocktails, every visit is meant to feel warm and welcoming.\n\nStop by Shop No. 02 — WhatsApp us on +92 312 8671544 for orders and updates.',
         coverImageUrl:
-          'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&w=1200&q=80',
+          'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&w=800&q=70',
         isPublished: true,
-      }),
-      this.blogsRepo.create({
+      },
+      {
         title: 'Our Café Menu Favorites',
         slug: 'cafe-menu-favorites',
         excerpt: 'Burgers, pasta, paninis, and cold coffees guests love most.',
         content:
           'Guests keep coming back for Cowboy and Bad Boy burgers, crispy wings, and our cold coffee lineup — Vanilla, Caramel, Hazelnut, Spanish, and Irish lattes.\n\nPair a meal with a raspberry mojito or pistachio shake for the full Brewing Cottage experience.',
         coverImageUrl:
-          'https://images.unsplash.com/photo-1553979459-d2229ba7433b?auto=format&fit=crop&w=1200&q=80',
+          'https://images.unsplash.com/photo-1553979459-d2229ba7433b?auto=format&fit=crop&w=800&q=70',
         isPublished: true,
-      }),
-      this.blogsRepo.create({
+      },
+      {
         title: 'Find Us in DHA Phase 2',
         slug: 'find-us-dha-phase-2',
         excerpt: 'Shop No. 02, Sector B, Family B Park — easy to reach.',
         content:
           'We are located at Shop No. 02, Sector B, Family B Park, DHA Phase 2, Islamabad. Message us on WhatsApp at +92 312 8671544 for directions, takeaway, or table questions.\n\nWe look forward to brewing something great for you.',
         coverImageUrl:
-          'https://images.unsplash.com/photo-1509042239860-f550ce710b93?auto=format&fit=crop&w=1200&q=80',
+          'https://images.unsplash.com/photo-1509042239860-f550ce710b93?auto=format&fit=crop&w=800&q=70',
         isPublished: true,
-      }),
-    ]);
-    this.logger.log('Seeded blog posts');
+      },
+      {
+        title: 'New Dessert Counter Favorites',
+        slug: 'new-dessert-counter-favorites',
+        excerpt:
+          'Cheesecake, molten lava, brownies, banana bread, and three milk — fresh from our dessert board.',
+        content:
+          'Sweet endings just landed at The Brewing Cottage. Try a Cheese cake slice (Rs 600), Chocolate fudge (Rs 500), Brownies (Rs 450), Banana bread (Rs 250), Molten lava (Rs 1,200), or classic Three milk (Rs 700).\n\nPair any dessert with a cappuccino or cold latte — perfect for Family B Park evenings.',
+        coverImageUrl:
+          'https://images.unsplash.com/photo-1524351199678-941a58a3df50?auto=format&fit=crop&w=800&q=70',
+        isPublished: true,
+      },
+      {
+        title: 'Molten Lava & Three Milk Moments',
+        slug: 'molten-lava-and-three-milk',
+        excerpt:
+          'Shareable chocolate lava cake and soft tres leches for the table.',
+        content:
+          'Our Molten lava cake arrives hot with a flowing chocolate center — made for sharing. Prefer something light and creamy? Three milk (tres leches) is soft sponge soaked through for a cool, sweet finish.\n\nAsk your waiter for today’s dessert specials when you dine in.',
+        coverImageUrl:
+          'https://images.unsplash.com/photo-1511910849309-0dffb247fb26?auto=format&fit=crop&w=800&q=70',
+        isPublished: true,
+      },
+    ];
+
+    let added = 0;
+    for (const post of posts) {
+      const existing = await this.blogsRepo.findOne({
+        where: { slug: post.slug },
+      });
+      if (existing) continue;
+      await this.blogsRepo.save(this.blogsRepo.create(post));
+      added += 1;
+    }
+    if (added) this.logger.log(`Seeded ${added} blog posts`);
   }
 
   private async seedTeam() {

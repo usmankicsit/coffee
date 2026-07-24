@@ -6,7 +6,7 @@ const API_ORIGIN = (
 
 /** Compact Unsplash params for fast POS tiles */
 const THUMB = 'auto=format&fit=crop&w=320&h=240&q=55';
-const FULL = 'auto=format&fit=crop&w=800&q=75';
+const FULL = 'auto=format&fit=crop&w=640&q=70';
 
 export const FALLBACK_PRODUCT_IMAGE = `https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?${THUMB}`;
 
@@ -68,6 +68,12 @@ const NAME_DEFAULTS: Record<string, string> = {
   'Pistachio Shake': unsplash('photo-1560008581-09826d1de69e'),
   'Blue Lagoon Slush': unsplash('photo-1513558161293-cdaf765ed2fd'),
   'Green Apple Slush': unsplash('photo-1622597467836-f3285f2131b8'),
+  'Cheese cake slice': unsplash('photo-1524351199678-941a58a3df50'),
+  'Chocolate fudge': unsplash('photo-1606313564200-e75d5e30476c'),
+  Brownies: unsplash('photo-1607920591413-4ec007729b28'),
+  'Banana bread': unsplash('photo-1509440159596-0249088772ff'),
+  'Molten lava': unsplash('photo-1511910849309-0dffb247fb26'),
+  'Three milk': unsplash('photo-1464349095431-e68bc7f4e12a'),
 };
 
 /** Shrink remote Unsplash URLs for faster POS tiles. */
@@ -82,8 +88,8 @@ export function optimizeImageUrl(url: string, size: 'thumb' | 'full' = 'thumb') 
       u.searchParams.set('h', '240');
       u.searchParams.set('q', '55');
     } else {
-      u.searchParams.set('w', '800');
-      u.searchParams.set('q', '75');
+      u.searchParams.set('w', '640');
+      u.searchParams.set('q', '70');
       u.searchParams.delete('h');
     }
     return u.toString();

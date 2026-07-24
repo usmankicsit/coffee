@@ -6,23 +6,23 @@ import * as THREE from 'three';
 
 const SLIDES = [
   {
-    src: 'https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?auto=format&fit=crop&w=1800&q=80',
+    src: 'https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?auto=format&fit=crop&w=1100&q=55',
     label: 'Cafe evenings',
   },
   {
-    src: 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&w=1800&q=80',
+    src: 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&w=1100&q=55',
     label: 'Fresh pours',
   },
   {
-    src: 'https://images.unsplash.com/photo-1442512595331-e89e73853f31?auto=format&fit=crop&w=1800&q=80',
+    src: 'https://images.unsplash.com/photo-1442512595331-e89e73853f31?auto=format&fit=crop&w=1100&q=55',
     label: 'Roasted beans',
   },
   {
-    src: 'https://images.unsplash.com/photo-1511920170033-f8396924c348?auto=format&fit=crop&w=1800&q=80',
+    src: 'https://images.unsplash.com/photo-1511920170033-f8396924c348?auto=format&fit=crop&w=1100&q=55',
     label: 'Latte craft',
   },
   {
-    src: 'https://images.unsplash.com/photo-1453614512568-c4024d13c247?auto=format&fit=crop&w=1800&q=80',
+    src: 'https://images.unsplash.com/photo-1453614512568-c4024d13c247?auto=format&fit=crop&w=1100&q=55',
     label: 'Warm tables',
   },
 ];
@@ -53,7 +53,7 @@ function HeroParticles() {
     renderer.setClearColor(0x000000, 0);
     mount.appendChild(renderer.domElement);
 
-    const count = 900;
+    const count = 280;
     const positions = new Float32Array(count * 3);
     const speeds = new Float32Array(count);
     for (let i = 0; i < count; i++) {
@@ -170,24 +170,23 @@ export function HeroLanding({
   const [paused, setPaused] = useState(false);
 
   useEffect(() => {
-    let loaded = 0;
     let cancelled = false;
-    const mark = () => {
-      loaded += 1;
-      if (!cancelled && loaded >= Math.min(2, SLIDES.length)) setReady(true);
+    // Show hero ASAP; only wait on the first slide
+    const first = new Image();
+    first.src = SLIDES[0].src;
+    first.onload = first.onerror = () => {
+      if (!cancelled) setReady(true);
     };
-    // Show UI quickly after first couple images; rest can load in background
-    SLIDES.forEach((slide, i) => {
-      const img = new Image();
-      img.src = slide.src;
-      img.onload = img.onerror = () => {
-        if (i < 2) mark();
-        else if (!cancelled) setReady(true);
-      };
-    });
     const fallback = window.setTimeout(() => {
       if (!cancelled) setReady(true);
-    }, 1200);
+    }, 600);
+    // Warm the next couple slides after first paint
+    window.setTimeout(() => {
+      SLIDES.slice(1, 3).forEach((slide) => {
+        const img = new Image();
+        img.src = slide.src;
+      });
+    }, 800);
     return () => {
       cancelled = true;
       window.clearTimeout(fallback);
@@ -229,7 +228,7 @@ export function HeroLanding({
       </div>
 
       <div className="hero-veil" />
-      <HeroParticles />
+      {ready && <HeroParticles />}
 
       <div className="site-hero-copy hero-copy-anim">
         <p className="site-eyebrow">Neighborhood coffee</p>

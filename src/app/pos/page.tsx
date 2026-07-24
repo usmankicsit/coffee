@@ -3,7 +3,7 @@
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { AppShell } from '@/components/AppShell';
-import { PaginationBar } from '@/components/ListControls';
+// import { PaginationBar } from '@/components/ListControls';
 import { ProductRatingBadge, ProductSellingTag } from '@/components/ProductBadges';
 import { api, ApiError } from '@/lib/api';
 import { money } from '@/lib/format';
@@ -368,11 +368,20 @@ function PosPageInner() {
             await printInvoice(order, shop, {
               openDrawer: shouldDrawer,
             });
-            setPrinterMsg(
-              shouldDrawer
-                ? 'Customer receipt printed and cash drawer opened.'
-                : 'Customer receipt printed.',
-            );
+            try {
+              await printKitchenTicket(order, shop);
+              setPrinterMsg(
+                shouldDrawer
+                  ? 'Customer + kitchen printed; cash drawer opened.'
+                  : 'Customer + kitchen tickets printed.',
+              );
+            } catch {
+              setPrinterMsg(
+                shouldDrawer
+                  ? 'Customer receipt printed and cash drawer opened.'
+                  : 'Customer receipt printed.',
+              );
+            }
           } catch (printErr) {
             setPrinterMsg(
               printErr instanceof Error
@@ -613,7 +622,7 @@ function PosPageInner() {
           </div>
           <div className="pos-product-scroll">
             <div className="product-grid">
-              {list.pageItems.map((product) => (
+              {list.filtered.map((product) => (
                 <button
                   key={product.id}
                   className="product-tile"
@@ -642,11 +651,12 @@ function PosPageInner() {
                   </div>
                 </button>
               ))}
-              {!list.pageItems.length && (
+              {!list.filtered.length && (
                 <p className="empty">No products match your search.</p>
               )}
             </div>
           </div>
+          {/* Pagination hidden on POS — show full scrollable list
           <PaginationBar
             page={list.page}
             totalPages={list.totalPages}
@@ -654,6 +664,7 @@ function PosPageInner() {
             pageSize={list.pageSize}
             onPageChange={list.setPage}
           />
+          */}
         </section>
         <aside className="cart-panel">
           <h2>{pendingWaiterOrder ? 'Waiter order' : 'Cart'}</h2>

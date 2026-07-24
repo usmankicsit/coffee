@@ -10,7 +10,7 @@ import { api } from '@/lib/api';
 import { useCart } from '@/lib/cart-context';
 import { money } from '@/lib/format';
 import { mediaUrl } from '@/lib/media';
-import { productImageSrc } from '@/lib/product-image';
+import { optimizeImageUrl, productImageSrc } from '@/lib/product-image';
 import type { BlogPost, Product, ShopSettings, TeamMember } from '@/lib/types';
 
 export default function HomePage() {
@@ -23,14 +23,13 @@ export default function HomePage() {
   useEffect(() => {
     Promise.all([
       api<ShopSettings>('/public/shop'),
-      api<Product[]>('/public/menu'),
+      api<Product[]>('/public/featured?limit=6'),
       api<BlogPost[]>('/public/blogs'),
       api<TeamMember[]>('/public/team'),
     ])
       .then(([s, products, b, t]) => {
         setShop(s);
-        const tagged = products.filter((p) => p.sellingTag);
-        setFeatured((tagged.length ? tagged : products).slice(0, 6));
+        setFeatured(products.slice(0, 6));
         setBlogs(b.slice(0, 3));
         setTeam(t.slice(0, 4));
       })
@@ -49,11 +48,19 @@ export default function HomePage() {
           <p>Top sellers and guest favorites — tap to add or open details.</p>
         </div>
         <div className="site-product-grid">
-          {featured.map((product) => (
+          {featured.map((product, index) => (
             <article key={product.id} className="site-product-card">
               <Link href={`/menu/${product.id}`} className="site-product-media">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={productImageSrc(product)} alt={product.name} />
+                <img
+                  src={productImageSrc(product, 'thumb')}
+                  alt={product.name}
+                  width={320}
+                  height={240}
+                  loading={index < 2 ? 'eager' : 'lazy'}
+                  decoding="async"
+                  fetchPriority={index < 2 ? 'high' : 'low'}
+                />
                 <ProductSellingTag product={product} />
               </Link>
               <div className="site-product-body">
@@ -88,11 +95,18 @@ export default function HomePage() {
             <article key={member.id} className="site-team-card">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src={mediaUrl(
-                  member.photoUrl,
-                  'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=400&q=80',
+                src={optimizeImageUrl(
+                  mediaUrl(
+                    member.photoUrl,
+                    'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=400&q=80',
+                  ),
+                  'thumb',
                 )}
                 alt={member.name}
+                width={160}
+                height={160}
+                loading="lazy"
+                decoding="async"
               />
               <strong>{member.name}</strong>
               <span>{member.roleTitle}</span>
@@ -111,11 +125,18 @@ export default function HomePage() {
             <Link key={post.id} href={`/blog/${post.slug}`} className="site-blog-card">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src={mediaUrl(
-                  post.coverImageUrl,
-                  'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&w=800&q=80',
+                src={optimizeImageUrl(
+                  mediaUrl(
+                    post.coverImageUrl,
+                    'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&w=800&q=80',
+                  ),
+                  'thumb',
                 )}
                 alt={post.title}
+                width={400}
+                height={240}
+                loading="lazy"
+                decoding="async"
               />
               <div>
                 <strong>{post.title}</strong>

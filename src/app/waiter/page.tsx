@@ -6,6 +6,7 @@ import { AppShell } from '@/components/AppShell';
 import { ProductRatingBadge, ProductSellingTag } from '@/components/ProductBadges';
 import { api, ApiError } from '@/lib/api';
 import { money } from '@/lib/format';
+import { printKitchenTicket } from '@/lib/print-invoice';
 import { productImageSrc } from '@/lib/product-image';
 import { usePagedList } from '@/lib/use-paged-list';
 import type {
@@ -28,6 +29,7 @@ export default function WaiterOrderPage() {
   const [ok, setOk] = useState('');
   const [busy, setBusy] = useState(false);
   const [lastOrder, setLastOrder] = useState<Order | null>(null);
+  const [kitchenMsg, setKitchenMsg] = useState('');
 
   useEffect(() => {
     Promise.all([
@@ -95,7 +97,7 @@ export default function WaiterOrderPage() {
     );
   }
 
-  async function sendToCashier() {
+  async function sendToCashier(alsoPrintKitchen = false) {
     if (!cart.length) return;
     if (!tableLabel.trim()) {
       setError('Enter the table number (e.g. Table 4)');
@@ -104,6 +106,7 @@ export default function WaiterOrderPage() {
     setBusy(true);
     setError('');
     setOk('');
+    setKitchenMsg('');
     try {
       const order = await api<Order>('/orders', {
         method: 'POST',
@@ -120,12 +123,35 @@ export default function WaiterOrderPage() {
       setNote('');
       setLastOrder(order);
       setOk(
-        `${order.orderNumber} sent to cashier as unpaid walk-in (waiter) order. Cashier will take payment and print.`,
+        `${order.orderNumber} sent to cashier as unpaid walk-in (waiter) order.`,
       );
+      if (alsoPrintKitchen) {
+        try {
+          await printKitchenTicket(order, shop);
+          setKitchenMsg(`Kitchen ticket printed for ${order.orderNumber}.`);
+        } catch (err) {
+          setKitchenMsg(
+            err instanceof Error ? err.message : 'Kitchen print failed',
+          );
+        }
+      }
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Could not send order');
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function reprintKitchen() {
+    if (!lastOrder) return;
+    setKitchenMsg('');
+    try {
+      await printKitchenTicket(lastOrder, shop);
+      setKitchenMsg(`Kitchen ticket printed for ${lastOrder.orderNumber}.`);
+    } catch (err) {
+      setKitchenMsg(
+        err instanceof Error ? err.message : 'Kitchen print failed',
+      );
     }
   }
 
@@ -147,8 +173,17 @@ export default function WaiterOrderPage() {
             Last sent: <strong>{lastOrder.orderNumber}</strong> ·{' '}
             {lastOrder.note || '—'} · {money(lastOrder.total, shop?.currency)} ·
             UNPAID
+            <button
+              className="btn"
+              type="button"
+              style={{ marginLeft: '0.75rem' }}
+              onClick={() => void reprintKitchen()}
+            >
+              Print kitchen
+            </button>
           </div>
         )}
+        {kitchenMsg && <div className="success-banner">{kitchenMsg}</div>}
         <div className="pos-layout waiter-layout">
           <section className="pos-menu-panel">
             <div className="pos-menu-toolbar">
@@ -307,13 +342,21 @@ export default function WaiterOrderPage() {
                 className="btn btn-pay btn-pay-cash"
                 style={{ width: '100%' }}
                 disabled={!cart.length || busy || !tableLabel.trim()}
-                onClick={() => void sendToCashier()}
+                onClick={() => void sendToCashier(false)}
               >
                 {busy ? 'Sending…' : 'Send to cashier'}
               </button>
+              <button
+                className="btn btn-primary"
+                style={{ width: '100%', marginTop: '0.5rem' }}
+                disabled={!cart.length || busy || !tableLabel.trim()}
+                onClick={() => void sendToCashier(true)}
+              >
+                {busy ? 'Sending…' : 'Send + print kitchen'}
+              </button>
               <div className="waiter-cart-footer-row">
                 <p className="muted-note">
-                  Cashier collects payment &amp; prints
+                  Cashier / admin can also take orders &amp; print kitchen
                 </p>
                 <button
                   className="btn"

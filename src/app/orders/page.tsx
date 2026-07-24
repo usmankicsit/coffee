@@ -374,6 +374,22 @@ export default function OrdersPage() {
                                   }}
                                 />
                               )}
+                              <IconButton
+                                label="Kitchen"
+                                icon="kitchen"
+                                showLabel
+                                onClick={() => {
+                                  void printKitchenTicket(order, shop).catch(
+                                    (err) => {
+                                      setError(
+                                        err instanceof Error
+                                          ? err.message
+                                          : 'Kitchen print failed',
+                                      );
+                                    },
+                                  );
+                                }}
+                              />
                             </>
                           )}
                           {!isWaiter && next && (
@@ -386,6 +402,24 @@ export default function OrdersPage() {
                             />
                           )}
                           {!unpaid && <InvoiceActions order={order} shop={shop} />}
+                          {unpaid && isWaiter && (
+                            <IconButton
+                              label="Kitchen"
+                              icon="kitchen"
+                              showLabel
+                              onClick={() => {
+                                void printKitchenTicket(order, shop).catch(
+                                  (err) => {
+                                    setError(
+                                      err instanceof Error
+                                        ? err.message
+                                        : 'Kitchen print failed',
+                                    );
+                                  },
+                                );
+                              }}
+                            />
+                          )}
                           {!isWaiter &&
                             order.status !== 'CANCELLED' &&
                             order.status !== 'COMPLETED' && (

@@ -10,6 +10,7 @@ import type { ShopSettings } from '@/lib/types';
 
 const staffLinks = [
   { href: '/pos', label: 'POS' },
+  { href: '/waiter', label: 'Take order' },
   { href: '/waiter-orders', label: 'Waiter orders' },
   { href: '/orders', label: 'Orders' },
   { href: '/online-orders', label: 'Online Orders' },
