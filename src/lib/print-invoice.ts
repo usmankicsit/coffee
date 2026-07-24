@@ -134,7 +134,7 @@ function buildInvoiceHtml(
     <strong>${escapeHtml(order.orderNumber)}</strong>
     · ${escapeHtml(order.source || 'POS')}<br/>
     ${new Date(order.createdAt).toLocaleString()}<br/>
-    Payment: ${escapeHtml(order.paymentMethod)} · ${escapeHtml(order.status)}
+    Payment: ${escapeHtml(order.paymentMethod || 'UNPAID')} · ${escapeHtml(order.status)}
     ${order.note ? `<br/>Note: ${escapeHtml(order.note)}` : ''}
   </div>
   <table>
