@@ -7,17 +7,19 @@ import { CustomSelect } from '@/components/CustomSelect';
 import { IconButton } from '@/components/IconButton';
 import { ListToolbar, PaginationBar } from '@/components/ListControls';
 import { api, ApiError } from '@/lib/api';
+import { useAuth } from '@/lib/auth-context';
 import { money } from '@/lib/format';
 import { usePagedList } from '@/lib/use-paged-list';
 import type { Order, OrderStatus, ShopSettings } from '@/lib/types';
 
 const NEXT_STATUS: Partial<Record<OrderStatus, OrderStatus>> = {
   PENDING: 'PREPARING',
-  PREPARING: 'READY',
+  PREPARING: 'COMPLETED',
   READY: 'COMPLETED',
 };
 
 export default function OnlineOrdersPage() {
+  const { isAdmin } = useAuth();
   const [active, setActive] = useState<Order[]>([]);
   const [today, setToday] = useState<Order[]>([]);
   const [shop, setShop] = useState<ShopSettings | null>(null);
@@ -32,7 +34,13 @@ export default function OnlineOrdersPage() {
         api<ShopSettings>('/shop'),
       ]);
       setActive(activeOrders);
-      setToday(allToday);
+      // Newest first for today's list
+      setToday(
+        [...allToday].sort(
+          (a, b) =>
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+        ),
+      );
       setShop(s);
     } catch (err) {
       setError(
@@ -54,7 +62,9 @@ export default function OnlineOrdersPage() {
         )
       : statusFilter === 'ALL'
         ? today
-        : today.filter((o) => o.status === statusFilter);
+        : statusFilter === 'PREPARING'
+          ? today.filter((o) => o.status === 'PREPARING' || o.status === 'READY')
+          : today.filter((o) => o.status === statusFilter);
 
   const filterFn = useCallback((order: Order, q: string) => {
     if (!q) return true;
@@ -85,6 +95,17 @@ export default function OnlineOrdersPage() {
       await load();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Update failed');
+    }
+  }
+
+  async function deleteOrder(id: string) {
+    if (!confirm('Delete this order permanently?')) return;
+    setError('');
+    try {
+      await api(`/orders/${id}`, { method: 'DELETE' });
+      await load();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Delete failed');
     }
   }
 
@@ -129,7 +150,6 @@ export default function OnlineOrdersPage() {
                 { value: 'ALL', label: 'All today' },
                 { value: 'PENDING', label: 'Pending' },
                 { value: 'PREPARING', label: 'Preparing' },
-                { value: 'READY', label: 'Ready' },
                 { value: 'COMPLETED', label: 'Completed' },
                 { value: 'CANCELLED', label: 'Cancelled' },
               ]}
@@ -190,17 +210,18 @@ export default function OnlineOrdersPage() {
                       </td>
                       <td>{money(order.total, shop?.currency)}</td>
                       <td>
-                        <span className={`badge badge-${order.status}`}>
-                          {order.status}
+                        <span className={`badge badge-${order.status === 'READY' ? 'PREPARING' : order.status}`}>
+                          {order.status === 'READY' ? 'PREPARING' : order.status}
                         </span>
                       </td>
                       <td>
                         <div className="inline-actions">
                           {next && (
                             <IconButton
-                              label={`Mark ${next}`}
+                              label={next === 'COMPLETED' ? 'Done' : 'Next'}
                               icon={next === 'COMPLETED' ? 'check' : 'forward'}
                               variant="primary"
+                              showLabel
                               onClick={() => updateStatus(order.id, next)}
                             />
                           )}
@@ -208,14 +229,24 @@ export default function OnlineOrdersPage() {
                           {order.status !== 'CANCELLED' &&
                             order.status !== 'COMPLETED' && (
                               <IconButton
-                                label="Cancel order"
+                                label="Cancel"
                                 icon="x"
                                 variant="danger"
+                                showLabel
                                 onClick={() =>
                                   updateStatus(order.id, 'CANCELLED')
                                 }
                               />
                             )}
+                          {isAdmin && (
+                            <IconButton
+                              label="Delete"
+                              icon="trash"
+                              variant="danger"
+                              showLabel
+                              onClick={() => void deleteOrder(order.id)}
+                            />
+                          )}
                         </div>
                       </td>
                     </tr>

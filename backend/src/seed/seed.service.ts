@@ -54,6 +54,25 @@ export class SeedService implements OnModuleInit {
       /* already varchar or table missing */
     }
 
+    try {
+      await this.usersRepo.query(`
+        ALTER TABLE orders
+          ADD COLUMN IF NOT EXISTS "paymentStatus" varchar(20) DEFAULT 'PAID'
+      `);
+      await this.usersRepo.query(`
+        UPDATE orders SET "paymentStatus" = 'PAID' WHERE "paymentStatus" IS NULL
+      `);
+      await this.usersRepo.query(`
+        ALTER TABLE orders ALTER COLUMN "paymentMethod" DROP NOT NULL
+      `);
+      await this.usersRepo.query(`
+        ALTER TABLE orders ALTER COLUMN "paymentMethod" TYPE varchar(20)
+          USING "paymentMethod"::text
+      `);
+    } catch {
+      /* columns may already exist */
+    }
+
     await this.seedUsers();
     await this.syncShopSettings();
     await this.seedMenu();
@@ -65,7 +84,9 @@ export class SeedService implements OnModuleInit {
     const userCount = await this.usersRepo.count();
     if (userCount === 0) {
       const adminHash = await bcrypt.hash('Admin123!', 10);
+      const managerHash = await bcrypt.hash('Manager123!', 10);
       const cashierHash = await bcrypt.hash('Cashier123!', 10);
+      const waiterHash = await bcrypt.hash('Waiter123!', 10);
       const customerHash = await bcrypt.hash('Customer123!', 10);
       await this.usersRepo.save([
         this.usersRepo.create({
@@ -76,10 +97,24 @@ export class SeedService implements OnModuleInit {
           isActive: true,
         }),
         this.usersRepo.create({
+          email: 'manager@coffee.local',
+          name: 'Admin',
+          role: UserRole.ADMIN,
+          passwordHash: managerHash,
+          isActive: true,
+        }),
+        this.usersRepo.create({
           email: 'cashier@coffee.local',
           name: 'Cashier',
           role: UserRole.CASHIER,
           passwordHash: cashierHash,
+          isActive: true,
+        }),
+        this.usersRepo.create({
+          email: 'waiter@coffee.local',
+          name: 'Waiter',
+          role: UserRole.WAITER,
+          passwordHash: waiterHash,
           isActive: true,
         }),
         this.usersRepo.create({
@@ -93,8 +128,42 @@ export class SeedService implements OnModuleInit {
           isActive: true,
         }),
       ]);
-      this.logger.log('Seeded admin, cashier, and customer users');
+      this.logger.log('Seeded super admin, admin, cashier, waiter, and customer');
       return;
+    }
+
+    const existingAdmin = await this.usersRepo.findOne({
+      where: { email: 'manager@coffee.local' },
+    });
+    if (!existingAdmin) {
+      const managerHash = await bcrypt.hash('Manager123!', 10);
+      await this.usersRepo.save(
+        this.usersRepo.create({
+          email: 'manager@coffee.local',
+          name: 'Admin',
+          role: UserRole.ADMIN,
+          passwordHash: managerHash,
+          isActive: true,
+        }),
+      );
+      this.logger.log('Seeded demo Admin user (manager@coffee.local)');
+    }
+
+    const existingWaiter = await this.usersRepo.findOne({
+      where: { email: 'waiter@coffee.local' },
+    });
+    if (!existingWaiter) {
+      const waiterHash = await bcrypt.hash('Waiter123!', 10);
+      await this.usersRepo.save(
+        this.usersRepo.create({
+          email: 'waiter@coffee.local',
+          name: 'Waiter',
+          role: UserRole.WAITER,
+          passwordHash: waiterHash,
+          isActive: true,
+        }),
+      );
+      this.logger.log('Seeded demo waiter user');
     }
 
     const existingCustomer = await this.usersRepo.findOne({

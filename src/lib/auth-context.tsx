@@ -27,6 +27,8 @@ interface AuthContextValue {
   refresh: () => Promise<void>;
   isAdmin: boolean;
   isStaff: boolean;
+  isWaiter: boolean;
+  isCashier: boolean;
   isCustomer: boolean;
 }
 
@@ -103,8 +105,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       register,
       logout,
       refresh,
-      isAdmin: user?.role === 'SUPER_ADMIN',
-      isStaff: user?.role === 'SUPER_ADMIN' || user?.role === 'CASHIER',
+      isAdmin: user?.role === 'SUPER_ADMIN' || user?.role === 'ADMIN',
+      isStaff:
+        user?.role === 'SUPER_ADMIN' ||
+        user?.role === 'ADMIN' ||
+        user?.role === 'CASHIER' ||
+        user?.role === 'WAITER',
+      isWaiter: user?.role === 'WAITER',
+      isCashier:
+        user?.role === 'CASHIER' ||
+        user?.role === 'SUPER_ADMIN' ||
+        user?.role === 'ADMIN',
       isCustomer: user?.role === 'CUSTOMER',
     }),
     [user, loading, login, register, logout, refresh],
@@ -121,6 +132,7 @@ export function useAuth() {
 
 export function homeForRole(role: User['role']) {
   if (role === 'CUSTOMER') return '/shop/dashboard';
-  if (role === 'SUPER_ADMIN') return '/admin/dashboard';
+  if (role === 'SUPER_ADMIN' || role === 'ADMIN') return '/admin/dashboard';
+  if (role === 'WAITER') return '/waiter';
   return '/pos';
 }

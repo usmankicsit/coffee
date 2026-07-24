@@ -16,7 +16,10 @@ export type IconName =
   | 'replace'
   | 'save'
   | 'star'
-  | 'flag';
+  | 'flag'
+  | 'kitchen'
+  | 'open'
+  | 'cash';
 
 const ICONS: Record<IconName, ReactNode> = {
   print: (
@@ -107,18 +110,44 @@ const ICONS: Record<IconName, ReactNode> = {
       <line x1="4" y1="22" x2="4" y2="15" />
     </svg>
   ),
+  kitchen: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M3 11h18v2a8 8 0 0 1-8 8h-2a8 8 0 0 1-8-8v-2Z" />
+      <path d="M12 2v4" />
+      <path d="M8 4v2" />
+      <path d="M16 4v2" />
+      <path d="M7 11V8a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v3" />
+    </svg>
+  ),
+  open: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+      <polyline points="15 3 21 3 21 9" />
+      <line x1="10" y1="14" x2="21" y2="3" />
+    </svg>
+  ),
+  cash: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <rect x="2" y="6" width="20" height="12" rx="2" />
+      <circle cx="12" cy="12" r="3" />
+      <path d="M6 12h.01M18 12h.01" />
+    </svg>
+  ),
 };
 
 type IconButtonProps = {
   label: string;
   icon: IconName;
   variant?: 'default' | 'primary' | 'danger' | 'success';
+  /** Show single-word text beside the icon */
+  showLabel?: boolean;
 } & Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'children' | 'aria-label' | 'title'>;
 
 export function IconButton({
   label,
   icon,
   variant = 'default',
+  showLabel = false,
   className = '',
   type = 'button',
   ...rest
@@ -126,12 +155,13 @@ export function IconButton({
   return (
     <button
       type={type}
-      className={`icon-btn icon-btn-${variant}${className ? ` ${className}` : ''}`}
+      className={`icon-btn icon-btn-${variant}${showLabel ? ' icon-btn-labeled' : ''}${className ? ` ${className}` : ''}`}
       aria-label={label}
       title={label}
       {...rest}
     >
       {ICONS[icon]}
+      {showLabel ? <span className="icon-btn-text">{label}</span> : null}
     </button>
   );
 }

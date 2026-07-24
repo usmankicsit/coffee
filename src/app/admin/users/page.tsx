@@ -78,7 +78,7 @@ export default function UsersPage() {
         <div className="page-header">
           <div>
             <h1>Users</h1>
-            <p>Create cashiers and manage access</p>
+            <p>Create cashiers, waiters, and manage access</p>
           </div>
         </div>
         {error && <div className="error">{error}</div>}
@@ -121,6 +121,8 @@ export default function UsersPage() {
                 onChange={(v) => setForm({ ...form, role: v as UserRole })}
                 options={[
                   { value: 'CASHIER', label: 'Cashier' },
+                  { value: 'WAITER', label: 'Waiter' },
+                  { value: 'ADMIN', label: 'Admin' },
                   { value: 'SUPER_ADMIN', label: 'Super Admin' },
                 ]}
               />
@@ -146,7 +148,9 @@ export default function UsersPage() {
               options={[
                 { value: 'ALL', label: 'All roles' },
                 { value: 'SUPER_ADMIN', label: 'Super Admin' },
+                { value: 'ADMIN', label: 'Admin' },
                 { value: 'CASHIER', label: 'Cashier' },
+                { value: 'WAITER', label: 'Waiter' },
                 { value: 'CUSTOMER', label: 'Customer' },
               ]}
             />

@@ -1,7 +1,11 @@
 'use client';
 
 import { IconButton } from '@/components/IconButton';
-import { downloadInvoice, printInvoice } from '@/lib/print-invoice';
+import {
+  downloadInvoice,
+  printInvoice,
+  printKitchenTicket,
+} from '@/lib/print-invoice';
 import type { Order, ShopSettings } from '@/lib/types';
 
 export function InvoiceActions({
@@ -14,8 +18,9 @@ export function InvoiceActions({
   return (
     <>
       <IconButton
-        label="Print invoice"
+        label="Invoice"
         icon="print"
+        showLabel
         onClick={() => {
           void printInvoice(order, shop, {
             openDrawer: order.paymentMethod === 'CASH',
@@ -25,8 +30,19 @@ export function InvoiceActions({
         }}
       />
       <IconButton
-        label="Download invoice"
+        label="Kitchen"
+        icon="kitchen"
+        showLabel
+        onClick={() => {
+          void printKitchenTicket(order, shop).catch((err) => {
+            alert(err instanceof Error ? err.message : 'Kitchen print failed');
+          });
+        }}
+      />
+      <IconButton
+        label="Save"
         icon="download"
+        showLabel
         onClick={() => downloadInvoice(order, shop)}
       />
     </>

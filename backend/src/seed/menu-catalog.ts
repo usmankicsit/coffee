@@ -13,7 +13,7 @@ export type MenuCategorySeed = {
 };
 
 const img = (id: string) =>
-  `https://images.unsplash.com/${id}?auto=format&fit=crop&w=800&q=80`;
+  `https://images.unsplash.com/${id}?auto=format&fit=crop&w=480&h=360&q=60`;
 
 export const MENU_CATEGORIES: MenuCategorySeed[] = [
   {

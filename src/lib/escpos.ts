@@ -113,9 +113,41 @@ export function qrCodeEscPos(data: string, moduleSize = 4): Uint8Array {
   );
 }
 
+function tableHeader(width: number): string {
+  const qtyW = 4;
+  const priceW = 8;
+  const nameW = Math.max(10, width - qtyW - priceW - 2);
+  const name = 'ITEM'.padEnd(nameW).slice(0, nameW);
+  const qty = 'QTY'.padStart(qtyW);
+  const price = 'TOTAL'.padStart(priceW);
+  return `${name} ${qty} ${price}`;
+}
+
+function tableRow(
+  name: string,
+  qty: number,
+  total: number | string,
+  width: number,
+): string[] {
+  const qtyW = 4;
+  const priceW = 8;
+  const nameW = Math.max(10, width - qtyW - priceW - 2);
+  const price = moneyAscii(total).padStart(priceW).slice(-priceW);
+  const qtyStr = String(qty).padStart(qtyW);
+  const clean = toAscii(name);
+  if (clean.length <= nameW) {
+    return [`${clean.padEnd(nameW)} ${qtyStr} ${price}`];
+  }
+  const first = clean.slice(0, nameW);
+  const rest = clean.slice(nameW);
+  return [
+    `${first.padEnd(nameW)} ${qtyStr} ${price}`,
+    rest.slice(0, width),
+  ];
+}
+
 /**
- * Simple text receipt — primary path for Cash / Print.
- * No UTF-8, no fancy fonts, no raster.
+ * Customer thermal receipt — table layout, #CUSTOMER tag, QR to website home.
  */
 export function buildReceiptEscPos(
   order: Order,
@@ -131,53 +163,45 @@ export function buildReceiptEscPos(
   const width = options?.width ?? 42;
   const shopName = toAscii(shop?.name || 'The Brewing Cottage') || 'The Brewing Cottage';
   const siteUrl = (options?.siteUrl || getReceiptSiteUrl()).replace(/\/$/, '');
-  const menuUrl = `${siteUrl}/menu`;
   const includeQr = options?.includeQr !== false;
 
   const lines: string[] = [];
+  lines.push(center('# CUSTOMER', width));
   lines.push(center(shopName, width));
   lines.push(center('TAX INVOICE / RECEIPT', width));
   if (shop?.phone) lines.push(center(toAscii(shop.phone), width));
   if (shop?.address) lines.push(center(toAscii(shop.address).slice(0, width), width));
-  lines.push('-'.repeat(width));
+  lines.push('='.repeat(width));
   lines.push(`Order: ${toAscii(order.orderNumber)}`);
   lines.push(`Date : ${toAscii(new Date(order.createdAt).toLocaleString('en-GB'))}`);
-  lines.push(`Cust : ${toAscii(order.createdBy?.name || 'Walk-in')}`);
-  lines.push(`Pay  : ${toAscii(order.paymentMethod)}`);
+  lines.push(`Pay  : ${toAscii(order.paymentMethod || 'UNPAID')}`);
+  if (order.note) lines.push(`Note : ${toAscii(order.note).slice(0, width - 7)}`);
+  lines.push('-'.repeat(width));
+  lines.push(tableHeader(width));
   lines.push('-'.repeat(width));
 
   for (const item of order.items || []) {
-    lines.push(toAscii(item.productName).slice(0, width));
-    lines.push(
-      padPair(
-        ` ${item.quantity} x ${moneyAscii(item.unitPrice)}`,
-        moneyAscii(item.lineTotal),
-        width,
-      ),
-    );
+    lines.push(...tableRow(item.productName, item.quantity, item.lineTotal, width));
   }
 
   lines.push('-'.repeat(width));
   lines.push(padPair('Subtotal', moneyAscii(order.subtotal), width));
   lines.push(padPair('Tax', moneyAscii(order.tax), width));
   lines.push(padPair('TOTAL', moneyAscii(order.total), width));
-  lines.push('-'.repeat(width));
-  lines.push(center('Scan QR for menu', width));
+  lines.push('='.repeat(width));
+  lines.push(center('Scan QR to visit us online', width));
   lines.push('');
 
   const chunks: Uint8Array[] = [
     initPrinter(),
-    // Double-size title line via ESC !
     new Uint8Array([ESC, 0x21, 0x30]),
-    encodeLines([center(shopName, 21)]),
+    encodeLines([center('# CUSTOMER', 21), center(shopName, 21)]),
     new Uint8Array([ESC, 0x21, 0x00]),
-    encodeLines(lines.slice(1)),
+    encodeLines(lines.slice(2)),
   ];
 
   if (includeQr) {
-    chunks.push(encodeLines([center('Menu online:', width)]));
-    chunks.push(qrCodeEscPos(menuUrl, 4));
-    chunks.push(encodeLines([center(menuUrl.replace('https://', ''), width)]));
+    chunks.push(qrCodeEscPos(siteUrl, 4));
   }
 
   chunks.push(encodeLines(['', center('Thank you!', width), '', '']));
@@ -188,8 +212,55 @@ export function buildReceiptEscPos(
   return concat(...chunks);
 }
 
+/**
+ * Kitchen ticket — items + qty only (no prices / QR).
+ */
+export function buildKitchenTicketEscPos(
+  order: Order,
+  shop?: ShopSettings | null,
+  options?: { cut?: boolean; width?: number },
+): Uint8Array {
+  const width = options?.width ?? 42;
+  const shopName = toAscii(shop?.name || 'The Brewing Cottage') || 'The Brewing Cottage';
+  const lines: string[] = [];
+  lines.push(center('# KITCHEN ORDER', width));
+  lines.push(center(shopName, width));
+  lines.push('='.repeat(width));
+  lines.push(`Order: ${toAscii(order.orderNumber)}`);
+  lines.push(`Time : ${toAscii(new Date(order.createdAt).toLocaleString('en-GB'))}`);
+  lines.push(`Source: ${toAscii(order.source || 'POS')}`);
+  if (order.note) lines.push(`Note : ${toAscii(order.note).slice(0, width - 7)}`);
+  lines.push('-'.repeat(width));
+  lines.push(padPair('QTY', 'ITEM', width));
+  lines.push('-'.repeat(width));
+
+  for (const item of order.items || []) {
+    const qty = String(item.quantity).padStart(3);
+    const name = toAscii(item.productName);
+    lines.push(`${qty}  ${name}`.slice(0, width));
+    if (name.length > width - 5) {
+      lines.push(`     ${name.slice(width - 5)}`.slice(0, width));
+    }
+  }
+
+  lines.push('='.repeat(width));
+  lines.push(center('PREPARE & SERVE', width));
+  lines.push('');
+
+  const chunks: Uint8Array[] = [
+    initPrinter(),
+    new Uint8Array([ESC, 0x21, 0x30]),
+    encodeLines([center('# KITCHEN', 21), center('ORDER TICKET', 21)]),
+    new Uint8Array([ESC, 0x21, 0x00]),
+    encodeLines(lines.slice(2)),
+  ];
+
+  if (options?.cut !== false) chunks.push(cutPaper());
+  return concat(...chunks);
+}
+
 export function buildTestPrintEscPos(siteUrl?: string): Uint8Array {
-  const url = (siteUrl || getReceiptSiteUrl()).replace(/\/$/, '') + '/menu';
+  const url = (siteUrl || getReceiptSiteUrl()).replace(/\/$/, '');
   return concat(
     initPrinter(),
     new Uint8Array([ESC, 0x21, 0x30]),
@@ -201,11 +272,11 @@ export function buildTestPrintEscPos(siteUrl?: string): Uint8Array {
       'thermal print is working.',
       toAscii(new Date().toLocaleString('en-GB')),
       '--------------------------',
-      'QR -> website menu:',
+      'QR -> website:',
       '',
     ]),
     qrCodeEscPos(url, 4),
-    encodeLines(['', url.replace('https://', ''), '', '']),
+    encodeLines(['', '', '']),
     cutPaper(),
   );
 }

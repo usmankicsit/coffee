@@ -1,4 +1,9 @@
-export type UserRole = 'SUPER_ADMIN' | 'CASHIER' | 'CUSTOMER';
+export type UserRole =
+  | 'SUPER_ADMIN'
+  | 'ADMIN'
+  | 'CASHIER'
+  | 'WAITER'
+  | 'CUSTOMER';
 
 export type OrderStatus =
   | 'PENDING'
@@ -9,7 +14,9 @@ export type OrderStatus =
 
 export type PaymentMethod = 'CASH' | 'CARD';
 
-export type OrderSource = 'POS' | 'ONLINE';
+export type PaymentStatus = 'UNPAID' | 'PAID';
+
+export type OrderSource = 'POS' | 'ONLINE' | 'WAITER';
 
 export type SellingTag = 'MOST_SELLING' | 'TOP_LISTED' | 'POPULAR';
 
@@ -72,7 +79,8 @@ export interface Order {
   orderNumber: string;
   status: OrderStatus;
   source: OrderSource;
-  paymentMethod: PaymentMethod;
+  paymentMethod: PaymentMethod | null;
+  paymentStatus?: PaymentStatus;
   subtotal: number | string;
   tax: number | string;
   total: number | string;

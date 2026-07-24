@@ -14,7 +14,7 @@ export function OrderFeedbackActions({
   onDone?: () => void;
 }) {
   const canReview =
-    order.status === 'COMPLETED' || order.status === 'READY';
+    order.source === 'ONLINE' && order.status === 'COMPLETED';
   const canClaim = order.status !== 'CANCELLED';
 
   const [showReview, setShowReview] = useState(false);
@@ -109,16 +109,18 @@ export function OrderFeedbackActions({
     <>
       {canReview && (
         <IconButton
-          label="Rate products"
+          label="Rate"
           icon="star"
           variant="primary"
+          showLabel
           onClick={() => setShowReview(true)}
         />
       )}
       {canClaim && (
         <IconButton
-          label="Report / Claim"
+          label="Claim"
           icon="flag"
+          showLabel
           onClick={() => setShowClaim(true)}
         />
       )}
@@ -127,7 +129,7 @@ export function OrderFeedbackActions({
         <div className="dialog-backdrop" onClick={() => !busy && setShowReview(false)}>
           <div className="dialog-card dialog-wide" onClick={(e) => e.stopPropagation()}>
             <h2>Rate products — {order.orderNumber}</h2>
-            <p>Share a rating for items from this order.</p>
+            <p>Rate items after your online order is completed.</p>
             {error && <div className="error">{error}</div>}
             <form className="form-grid" onSubmit={submitReviews}>
               {(order.items || []).map((item) => (

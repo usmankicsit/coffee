@@ -29,16 +29,29 @@ export class CreateOrderDto {
   @Type(() => CreateOrderItemDto)
   items: CreateOrderItemDto[];
 
+  /** Required for cashier/POS/customer; optional for waiter (unpaid). */
+  @IsOptional()
   @IsEnum(PaymentMethod)
-  paymentMethod: PaymentMethod;
+  paymentMethod?: PaymentMethod;
 
   @IsOptional()
   @IsString()
   @MaxLength(255)
   note?: string;
+
+  /** Table / seat label for waiter dine-in orders. */
+  @IsOptional()
+  @IsString()
+  @MaxLength(80)
+  tableLabel?: string;
 }
 
 export class UpdateOrderStatusDto {
   @IsEnum(OrderStatus)
   status: OrderStatus;
+}
+
+export class PayOrderDto {
+  @IsEnum(PaymentMethod)
+  paymentMethod: PaymentMethod;
 }

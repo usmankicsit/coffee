@@ -9,7 +9,7 @@ import { useAuth } from '@/lib/auth-context';
 import { useCart } from '@/lib/cart-context';
 import { money } from '@/lib/format';
 import { productImageSrc } from '@/lib/product-image';
-import type { Order, PaymentMethod, ShopSettings } from '@/lib/types';
+import type { Order, ShopSettings } from '@/lib/types';
 
 function CartContent() {
   const router = useRouter();
@@ -18,7 +18,6 @@ function CartContent() {
   const { user, isCustomer, loading } = useAuth();
   const [shop, setShop] = useState<ShopSettings | null>(null);
   const [note, setNote] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('CARD');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [order, setOrder] = useState<Order | null>(null);
@@ -45,7 +44,7 @@ function CartContent() {
       const created = await api<Order>('/orders', {
         method: 'POST',
         body: JSON.stringify({
-          paymentMethod,
+          paymentMethod: 'CASH',
           note: note || undefined,
           items: items.map((l) => ({
             productId: l.product.id,
@@ -157,22 +156,9 @@ function CartContent() {
               </div>
               <div className="form-row">
                 <label>Payment</label>
-                <div className="pay-row">
-                  <button
-                    type="button"
-                    className={`btn btn-pay btn-pay-cash${paymentMethod === 'CASH' ? ' active-pay' : ''}`}
-                    onClick={() => setPaymentMethod('CASH')}
-                  >
-                    Cash
-                  </button>
-                  <button
-                    type="button"
-                    className={`btn btn-pay btn-pay-card${paymentMethod === 'CARD' ? ' active-pay' : ''}`}
-                    onClick={() => setPaymentMethod('CARD')}
-                  >
-                    Debit card
-                  </button>
-                </div>
+                <p className="muted-note" style={{ margin: 0 }}>
+                  Cash on delivery only
+                </p>
               </div>
               <div className="form-row">
                 <label>Note (optional)</label>
@@ -198,9 +184,7 @@ function CartContent() {
                 {busy
                   ? 'Placing order…'
                   : isCustomer
-                    ? paymentMethod === 'CARD'
-                      ? 'Pay with debit card'
-                      : 'Place cash order'
+                    ? 'Place cash-on-delivery order'
                     : 'Sign in to checkout'}
               </button>
               {!isCustomer && (

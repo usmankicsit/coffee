@@ -1,12 +1,17 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { AppShell } from '@/components/AppShell';
 import { PaginationBar } from '@/components/ListControls';
 import { ProductRatingBadge, ProductSellingTag } from '@/components/ProductBadges';
 import { api, ApiError } from '@/lib/api';
 import { money } from '@/lib/format';
-import { printInvoice, downloadInvoice } from '@/lib/print-invoice';
+import {
+  downloadInvoice,
+  printInvoice,
+  printKitchenTicket,
+} from '@/lib/print-invoice';
 import {
   BAUD_OPTIONS,
   connectSerialPrinter,
@@ -33,7 +38,11 @@ import type {
   ShopSettings,
 } from '@/lib/types';
 
-export default function PosPage() {
+function PosPageInner() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const waiterOrderId = searchParams.get('waiterOrderId');
+
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [shop, setShop] = useState<ShopSettings | null>(null);
@@ -42,14 +51,27 @@ export default function PosPage() {
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [lastOrder, setLastOrder] = useState<Order | null>(null);
+  const [pendingWaiterOrder, setPendingWaiterOrder] = useState<Order | null>(
+    null,
+  );
   const [printerReady, setPrinterReady] = useState(false);
   const [prefs, setPrefs] = useState<PrinterPrefs>(DEFAULT_SAFE_PREFS);
   const [printerMsg, setPrinterMsg] = useState('');
   const [payOk, setPayOk] = useState('');
+  const [hwOpen, setHwOpen] = useState(false);
+  const hwRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setPrefs(getPrinterPrefs());
     tryReconnectPosPrinter().then((ok) => setPrinterReady(ok));
+  }, []);
+
+  useEffect(() => {
+    function onDocClick(e: MouseEvent) {
+      if (!hwRef.current?.contains(e.target as Node)) setHwOpen(false);
+    }
+    document.addEventListener('mousedown', onDocClick);
+    return () => document.removeEventListener('mousedown', onDocClick);
   }, []);
 
   useEffect(() => {
@@ -67,6 +89,55 @@ export default function PosPage() {
         setError(err instanceof ApiError ? err.message : 'Failed to load menu'),
       );
   }, []);
+
+  /** Load unpaid waiter order into cart when opened from Waiter orders. */
+  useEffect(() => {
+    if (!waiterOrderId || !products.length) return;
+    let cancelled = false;
+    setError('');
+    api<Order>(`/orders/${waiterOrderId}`)
+      .then((order) => {
+        if (cancelled) return;
+        if (order.source !== 'WAITER') {
+          setError('This is not a waiter order.');
+          return;
+        }
+        if (order.paymentStatus === 'PAID') {
+          setError(`${order.orderNumber} is already paid.`);
+          setPendingWaiterOrder(null);
+          return;
+        }
+        const lines: CartItem[] = (order.items || []).map((item) => {
+          const found = products.find((p) => p.id === item.productId);
+          const product: Product =
+            found ||
+            ({
+              id: item.productId,
+              name: item.productName,
+              price: item.unitPrice,
+              categoryId: '',
+              isAvailable: true,
+            } as Product);
+          return { product, quantity: item.quantity };
+        });
+        setPendingWaiterOrder(order);
+        setCart(lines);
+        setPayOk('');
+        setPrinterMsg(
+          `${order.orderNumber} loaded — print Kitchen first if needed, then collect payment.`,
+        );
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          setError(
+            err instanceof ApiError ? err.message : 'Failed to load waiter order',
+          );
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [waiterOrderId, products]);
 
   const categoryFiltered = useMemo(() => {
     if (activeCategory === 'all') return products;
@@ -89,29 +160,40 @@ export default function PosPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeCategory]);
 
-  const subtotal = cart.reduce(
-    (sum, line) => sum + Number(line.product.price) * line.quantity,
-    0,
-  );
+  const subtotal = pendingWaiterOrder
+    ? Number(pendingWaiterOrder.subtotal)
+    : cart.reduce(
+        (sum, line) => sum + Number(line.product.price) * line.quantity,
+        0,
+      );
   const taxPercent = Number(shop?.taxPercent ?? 0);
-  const tax = Math.round(subtotal * (taxPercent / 100) * 100) / 100;
-  const total = Math.round((subtotal + tax) * 100) / 100;
+  const tax = pendingWaiterOrder
+    ? Number(pendingWaiterOrder.tax)
+    : Math.round(subtotal * (taxPercent / 100) * 100) / 100;
+  const total = pendingWaiterOrder
+    ? Number(pendingWaiterOrder.total)
+    : Math.round((subtotal + tax) * 100) / 100;
 
+  const cartLocked = Boolean(pendingWaiterOrder);
+
+  /** Newest items first; bumping qty moves line to top. */
   function addToCart(product: Product) {
+    if (cartLocked) return;
     setCart((prev) => {
       const existing = prev.find((l) => l.product.id === product.id);
       if (existing) {
-        return prev.map((l) =>
-          l.product.id === product.id
-            ? { ...l, quantity: l.quantity + 1 }
-            : l,
-        );
+        const updated = {
+          ...existing,
+          quantity: existing.quantity + 1,
+        };
+        return [updated, ...prev.filter((l) => l.product.id !== product.id)];
       }
-      return [...prev, { product, quantity: 1 }];
+      return [{ product, quantity: 1 }, ...prev];
     });
   }
 
   function setQty(productId: string, quantity: number) {
+    if (cartLocked) return;
     setCart((prev) =>
       prev
         .map((l) =>
@@ -121,10 +203,28 @@ export default function PosPage() {
     );
   }
 
+  function clearCart() {
+    setCart([]);
+    setPendingWaiterOrder(null);
+    if (waiterOrderId) router.replace('/pos');
+  }
+
+  async function printKitchenForPending() {
+    if (!pendingWaiterOrder) return;
+    setPrinterMsg('');
+    try {
+      await printKitchenTicket(pendingWaiterOrder, shop);
+      setPrinterMsg(`Kitchen slip printed for ${pendingWaiterOrder.orderNumber}.`);
+    } catch (err) {
+      setPrinterMsg(
+        err instanceof Error ? err.message : 'Kitchen print failed',
+      );
+    }
+  }
+
   async function handleConnectPrinter() {
     setPrinterMsg('');
     try {
-      // Prefer WebUSB for Ztech / POS80 — do NOT use serial Bluetooth ports
       if (isWebUsbSupported()) {
         const name = await connectUsbPrinter();
         setPrinterReady(true);
@@ -191,7 +291,7 @@ export default function PosPage() {
       }
       await testPrintReceipt();
       setPrinterMsg(
-        'Test print sent. Look for "PRINT TEST OK" / "HELLO FROM BREW AND BEAN" on paper. If still blank after flipping paper, the USB path may be wrong — tell us the result.',
+        'Test print sent. Look for "PRINT TEST OK" / "HELLO FROM BREW AND BEAN" on paper.',
       );
     } catch (err) {
       setPrinterMsg(err instanceof Error ? err.message : 'Test print failed');
@@ -206,21 +306,33 @@ export default function PosPage() {
   }
 
   async function checkout(paymentMethod: PaymentMethod) {
-    if (!cart.length) return;
+    if (!cart.length && !pendingWaiterOrder) return;
     setBusy(true);
     setError('');
     setPayOk('');
     try {
-      const order = await api<Order>('/orders', {
-        method: 'POST',
-        body: JSON.stringify({
-          paymentMethod,
-          items: cart.map((l) => ({
-            productId: l.product.id,
-            quantity: l.quantity,
-          })),
-        }),
-      });
+      let order: Order;
+
+      if (pendingWaiterOrder) {
+        order = await api<Order>(`/orders/${pendingWaiterOrder.id}/pay`, {
+          method: 'PATCH',
+          body: JSON.stringify({ paymentMethod }),
+        });
+        setPendingWaiterOrder(null);
+        router.replace('/pos');
+      } else {
+        order = await api<Order>('/orders', {
+          method: 'POST',
+          body: JSON.stringify({
+            paymentMethod,
+            items: cart.map((l) => ({
+              productId: l.product.id,
+              quantity: l.quantity,
+            })),
+          }),
+        });
+      }
+
       setCart([]);
       setLastOrder(order);
       setPayOk(
@@ -228,8 +340,11 @@ export default function PosPage() {
           ? `Debit card payment recorded — ${order.orderNumber}`
           : `Cash payment recorded — ${order.orderNumber}`,
       );
-      const refreshed = await api<Product[]>('/products/menu');
-      setProducts(refreshed);
+      setBusy(false);
+
+      void api<Product[]>('/products/menu')
+        .then(setProducts)
+        .catch(() => undefined);
 
       const p = getPrinterPrefs();
       const shouldPrint =
@@ -239,35 +354,36 @@ export default function PosPage() {
         paymentMethod === 'CASH' && p.openDrawerOnCash;
 
       if (shouldPrint || shouldDrawer) {
-        try {
-          if (!isPrinterConnected()) {
-            await tryReconnectPosPrinter();
-          }
-          if (!isPrinterConnected()) {
-            setPrinterMsg(
-              'Sale saved, but printer is not connected. Click Connect USB printer, then Print invoice.',
-            );
-          } else {
+        void (async () => {
+          try {
+            if (!isPrinterConnected()) {
+              await tryReconnectPosPrinter();
+            }
+            if (!isPrinterConnected()) {
+              setPrinterMsg(
+                'Sale saved, but printer is not connected. Open printer settings, then Print invoice.',
+              );
+              return;
+            }
             await printInvoice(order, shop, {
               openDrawer: shouldDrawer,
             });
             setPrinterMsg(
               shouldDrawer
-                ? 'Receipt sent to printer and cash drawer opened.'
-                : 'Receipt sent to printer.',
+                ? 'Customer receipt printed and cash drawer opened.'
+                : 'Customer receipt printed.',
+            );
+          } catch (printErr) {
+            setPrinterMsg(
+              printErr instanceof Error
+                ? `Sale saved, but print failed: ${printErr.message}`
+                : 'Sale saved, but print failed.',
             );
           }
-        } catch (printErr) {
-          setPrinterMsg(
-            printErr instanceof Error
-              ? `Sale saved, but print failed: ${printErr.message}`
-              : 'Sale saved, but print failed.',
-          );
-        }
+        })();
       }
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Checkout failed');
-    } finally {
       setBusy(false);
     }
   }
@@ -277,9 +393,13 @@ export default function PosPage() {
       <div className="page-header">
         <div>
           <h1>Point of Sale</h1>
-          <p>{shop?.name || 'Coffee Shop'} — tap items to add to cart</p>
+          <p>
+            {pendingWaiterOrder
+              ? `Waiter order ${pendingWaiterOrder.orderNumber} — ${pendingWaiterOrder.note || 'table'} (unpaid)`
+              : `${shop?.name || 'Coffee Shop'} — tap items to add to cart`}
+          </p>
         </div>
-        <div className="pos-hardware-bar">
+        <div className="pos-hardware-bar" ref={hwRef}>
           {isWebUsbSupported() || isWebSerialSupported() ? (
             <>
               <span
@@ -292,62 +412,7 @@ export default function PosPage() {
               >
                 {printerReady ? 'Printer linked' : 'Printer off'}
               </span>
-              {printerReady ? (
-                <button className="btn" type="button" onClick={handleDisconnectPrinter}>
-                  Disconnect
-                </button>
-              ) : (
-                <>
-                  <button
-                    className="btn btn-primary"
-                    type="button"
-                    onClick={handleConnectPrinter}
-                  >
-                    Connect USB printer
-                  </button>
-                  {isWebSerialSupported() && (
-                    <button
-                      className="btn"
-                      type="button"
-                      onClick={handleConnectSerialFallback}
-                    >
-                      Serial (advanced)
-                    </button>
-                  )}
-                </>
-              )}
-              <button className="btn" type="button" onClick={handleTestDrawer}>
-                Test drawer
-              </button>
-              <button className="btn" type="button" onClick={handleTestPrint}>
-                Test print
-              </button>
-              <label className="pos-pref">
-                Baud
-                <select
-                  value={prefs.baudRate}
-                  onChange={(e) => handleBaudChange(Number(e.target.value))}
-                >
-                  {BAUD_OPTIONS.map((b) => (
-                    <option key={b} value={b}>
-                      {b}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="pos-pref">
-                <input
-                  type="checkbox"
-                  checked={prefs.autoPrintOnCash}
-                  onChange={(e) =>
-                    setPrefs(
-                      setPrinterPrefs({ autoPrintOnCash: e.target.checked }),
-                    )
-                  }
-                />
-                Auto print
-              </label>
-              <label className="pos-pref">
+              <label className="pos-pref pos-pref-inline">
                 <input
                   type="checkbox"
                   checked={prefs.openDrawerOnCash}
@@ -359,6 +424,105 @@ export default function PosPage() {
                 />
                 Open drawer on Cash
               </label>
+              <div className="pos-hw-menu">
+                <button
+                  className="btn pos-hw-toggle"
+                  type="button"
+                  aria-expanded={hwOpen}
+                  aria-haspopup="true"
+                  title="Printer settings"
+                  onClick={() => setHwOpen((v) => !v)}
+                >
+                  <svg
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    aria-hidden
+                  >
+                    <circle cx="12" cy="12" r="3" />
+                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+                  </svg>
+                  Printer
+                </button>
+                {hwOpen && (
+                  <div className="pos-hw-dropdown" role="menu">
+                    {printerReady ? (
+                      <button
+                        className="btn"
+                        type="button"
+                        onClick={() => void handleDisconnectPrinter()}
+                      >
+                        Disconnect
+                      </button>
+                    ) : (
+                      <>
+                        <button
+                          className="btn btn-primary"
+                          type="button"
+                          onClick={() => void handleConnectPrinter()}
+                        >
+                          Connect USB printer
+                        </button>
+                        {isWebSerialSupported() && (
+                          <button
+                            className="btn"
+                            type="button"
+                            onClick={() => void handleConnectSerialFallback()}
+                          >
+                            Serial (advanced)
+                          </button>
+                        )}
+                      </>
+                    )}
+                    <button
+                      className="btn"
+                      type="button"
+                      onClick={() => void handleTestDrawer()}
+                    >
+                      Test drawer
+                    </button>
+                    <button
+                      className="btn"
+                      type="button"
+                      onClick={() => void handleTestPrint()}
+                    >
+                      Test print
+                    </button>
+                    <label className="pos-pref">
+                      Baud
+                      <select
+                        value={prefs.baudRate}
+                        onChange={(e) =>
+                          void handleBaudChange(Number(e.target.value))
+                        }
+                      >
+                        {BAUD_OPTIONS.map((b) => (
+                          <option key={b} value={b}>
+                            {b}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="pos-pref">
+                      <input
+                        type="checkbox"
+                        checked={prefs.autoPrintOnCash}
+                        onChange={(e) =>
+                          setPrefs(
+                            setPrinterPrefs({
+                              autoPrintOnCash: e.target.checked,
+                            }),
+                          )
+                        }
+                      />
+                      Auto print
+                    </label>
+                  </div>
+                )}
+              </div>
             </>
           ) : (
             <span className="muted-note">
@@ -381,7 +545,7 @@ export default function PosPage() {
                 openDrawer: lastOrder.paymentMethod === 'CASH',
               })
                 .then(() =>
-                  setPrinterMsg('Receipt sent to thermal printer.'),
+                  setPrinterMsg('Customer receipt sent to printer.'),
                 )
                 .catch((err) =>
                   setPrinterMsg(
@@ -391,6 +555,23 @@ export default function PosPage() {
             }}
           >
             Print invoice
+          </button>
+          <button
+            className="btn"
+            style={{ marginLeft: '0.4rem' }}
+            onClick={() => {
+              void printKitchenTicket(lastOrder, shop)
+                .then(() => setPrinterMsg('Kitchen ticket sent to printer.'))
+                .catch((err) =>
+                  setPrinterMsg(
+                    err instanceof Error
+                      ? err.message
+                      : 'Kitchen print failed',
+                  ),
+                );
+            }}
+          >
+            Print kitchen
           </button>
           <button
             className="btn"
@@ -438,14 +619,19 @@ export default function PosPage() {
                   className="product-tile"
                   onClick={() => addToCart(product)}
                   disabled={
-                    product.inventory != null && product.inventory.quantity <= 0
+                    cartLocked ||
+                    (product.inventory != null && product.inventory.quantity <= 0)
                   }
                 >
                   <div className="product-tile-media">
                     <img
-                      src={productImageSrc(product)}
+                      src={productImageSrc(product, 'thumb')}
                       alt={product.name}
                       className="product-tile-image"
+                      loading="lazy"
+                      decoding="async"
+                      width={320}
+                      height={240}
                     />
                     <ProductSellingTag product={product} />
                   </div>
@@ -470,34 +656,46 @@ export default function PosPage() {
           />
         </section>
         <aside className="cart-panel">
-          <h2>Cart</h2>
+          <h2>{pendingWaiterOrder ? 'Waiter order' : 'Cart'}</h2>
+          {pendingWaiterOrder && (
+            <div className="success-banner" style={{ marginBottom: '0.65rem' }}>
+              {pendingWaiterOrder.orderNumber} ·{' '}
+              {pendingWaiterOrder.note || 'Table'} · UNPAID
+            </div>
+          )}
           <div className="cart-items">
             {!cart.length && <p className="empty">Cart is empty</p>}
             {cart.map((line) => (
               <div className="cart-line" key={line.product.id}>
-                <div>
+                <div className="cart-line-info">
                   <strong>{line.product.name}</strong>
-                  <div className="qty">
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setQty(line.product.id, line.quantity - 1)
-                      }
-                    >
-                      −
-                    </button>
-                    <span>{line.quantity}</span>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setQty(line.product.id, line.quantity + 1)
-                      }
-                    >
-                      +
-                    </button>
-                  </div>
+                  {cartLocked ? (
+                    <div className="qty">
+                      <span>× {line.quantity}</span>
+                    </div>
+                  ) : (
+                    <div className="qty">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setQty(line.product.id, line.quantity - 1)
+                        }
+                      >
+                        −
+                      </button>
+                      <span>{line.quantity}</span>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setQty(line.product.id, line.quantity + 1)
+                        }
+                      >
+                        +
+                      </button>
+                    </div>
+                  )}
                 </div>
-                <div>
+                <div className="cart-line-price">
                   {money(
                     Number(line.product.price) * line.quantity,
                     shop?.currency,
@@ -521,17 +719,27 @@ export default function PosPage() {
                 <span>{money(total, shop?.currency)}</span>
               </div>
             </div>
+            {pendingWaiterOrder && (
+              <button
+                className="btn btn-primary"
+                type="button"
+                style={{ width: '100%' }}
+                onClick={() => void printKitchenForPending()}
+              >
+                Print kitchen
+              </button>
+            )}
             <div className="pay-row">
               <button
                 className="btn btn-pay btn-pay-cash"
-                disabled={!cart.length || busy}
+                disabled={(!cart.length && !pendingWaiterOrder) || busy}
                 onClick={() => checkout('CASH')}
               >
                 {busy ? 'Saving…' : 'Cash'}
               </button>
               <button
                 className="btn btn-pay btn-pay-card"
-                disabled={!cart.length || busy}
+                disabled={(!cart.length && !pendingWaiterOrder) || busy}
                 onClick={() => checkout('CARD')}
               >
                 {busy ? 'Saving…' : 'Debit card'}
@@ -540,21 +748,36 @@ export default function PosPage() {
             {payOk && <div className="success-banner">{payOk}</div>}
             {lastOrder && (
               <p className="muted-note">
-                Last sale: {lastOrder.orderNumber} · {lastOrder.paymentMethod === 'CARD' ? 'Debit card' : 'Cash'} ·{' '}
+                Last sale: {lastOrder.orderNumber} ·{' '}
+                {lastOrder.paymentMethod === 'CARD' ? 'Debit card' : 'Cash'} ·{' '}
                 {money(lastOrder.total, shop?.currency)}
               </p>
             )}
             <button
               className="btn"
-              disabled={!cart.length || busy}
-              onClick={() => setCart([])}
+              disabled={(!cart.length && !pendingWaiterOrder) || busy}
+              onClick={clearCart}
             >
-              Clear cart
+              {pendingWaiterOrder ? 'Dismiss' : 'Clear cart'}
             </button>
           </div>
         </aside>
       </div>
     </AppShell>
+  );
+}
+
+export default function PosPage() {
+  return (
+    <Suspense
+      fallback={
+        <AppShell>
+          <p className="empty">Loading POS…</p>
+        </AppShell>
+      }
+    >
+      <PosPageInner />
+    </Suspense>
   );
 }
 

@@ -9,7 +9,12 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import { OrderSource, OrderStatus, PaymentMethod } from '../common/enums';
+import {
+  OrderSource,
+  OrderStatus,
+  PaymentMethod,
+  PaymentStatus,
+} from '../common/enums';
 import { User } from '../users/user.entity';
 import { OrderItem } from './order-item.entity';
 
@@ -29,8 +34,17 @@ export class Order {
   @Column({ type: 'varchar', length: 20, default: OrderSource.POS })
   source: OrderSource;
 
-  @Column({ type: 'enum', enum: PaymentMethod })
-  paymentMethod: PaymentMethod;
+  /** Null until cashier collects payment on waiter orders. */
+  @Column({ type: 'varchar', length: 20, nullable: true })
+  paymentMethod: PaymentMethod | null;
+
+  @Index()
+  @Column({
+    type: 'varchar',
+    length: 20,
+    default: PaymentStatus.PAID,
+  })
+  paymentStatus: PaymentStatus;
 
   @Column({ type: 'decimal', precision: 10, scale: 2 })
   subtotal: number;

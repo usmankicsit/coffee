@@ -6,12 +6,16 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Between, DataSource, Repository } from 'typeorm';
-import { OrderSource, OrderStatus, UserRole } from '../common/enums';
+import { OrderSource, OrderStatus, PaymentMethod, PaymentStatus, UserRole } from '../common/enums';
 import { Inventory } from '../inventory/inventory.entity';
 import { Product } from '../products/product.entity';
 import { ShopSettings } from '../shop/shop-settings.entity';
 import { User } from '../users/user.entity';
-import { CreateOrderDto, UpdateOrderStatusDto } from './dto/order.dto';
+import {
+  CreateOrderDto,
+  PayOrderDto,
+  UpdateOrderStatusDto,
+} from './dto/order.dto';
 import { OrderItem } from './order-item.entity';
 import { Order } from './order.entity';
 
@@ -39,8 +43,43 @@ export class OrdersService {
     dto: CreateOrderDto,
     user: { id: string; role: UserRole },
   ) {
-    const source =
-      user.role === UserRole.CUSTOMER ? OrderSource.ONLINE : OrderSource.POS;
+    const isWaiter = user.role === UserRole.WAITER;
+    const isCustomer = user.role === UserRole.CUSTOMER;
+
+    if (isCustomer && !dto.paymentMethod) {
+      throw new BadRequestException('Payment method is required');
+    }
+    if (isCustomer && dto.paymentMethod !== PaymentMethod.CASH) {
+      throw new BadRequestException(
+        'Online orders support cash on delivery only',
+      );
+    }
+    if (!isWaiter && !isCustomer && !dto.paymentMethod) {
+      throw new BadRequestException('Payment method is required');
+    }
+    if (isWaiter && !dto.tableLabel?.trim() && !dto.note?.trim()) {
+      throw new BadRequestException(
+        'Add a table number (e.g. Table 4) for waiter orders',
+      );
+    }
+
+    const source = isCustomer
+      ? OrderSource.ONLINE
+      : isWaiter
+        ? OrderSource.WAITER
+        : OrderSource.POS;
+
+    const paymentStatus = isWaiter
+      ? PaymentStatus.UNPAID
+      : PaymentStatus.PAID;
+
+    const noteParts = [
+      isWaiter && dto.tableLabel?.trim()
+        ? `Table: ${dto.tableLabel.trim()}`
+        : null,
+      dto.note?.trim() || null,
+    ].filter(Boolean);
+    const note = noteParts.length ? noteParts.join(' · ') : null;
 
     return this.dataSource.transaction(async (manager) => {
       const settings = await manager.findOne(ShopSettings, { where: {} });
@@ -92,11 +131,12 @@ export class OrdersService {
         orderNumber,
         status: OrderStatus.PENDING,
         source,
-        paymentMethod: dto.paymentMethod,
+        paymentMethod: isWaiter ? null : dto.paymentMethod!,
+        paymentStatus,
         subtotal,
         tax,
         total,
-        note: dto.note?.trim() || null,
+        note,
         createdById: user.id,
       });
       const savedOrder = await manager.save(order);
@@ -143,13 +183,28 @@ export class OrdersService {
             source: OrderSource.ONLINE,
             status: OrderStatus.PREPARING,
           },
+          // legacy READY still shown in active until moved to COMPLETED
           {
             source: OrderSource.ONLINE,
             status: OrderStatus.READY,
           },
         ],
         relations: { items: true, createdBy: true },
-        order: { createdAt: 'ASC' },
+        order: { createdAt: 'DESC' },
+      })
+      .then((orders) => this.sanitizeOrders(orders));
+  }
+
+  findUnpaidWaiterToday() {
+    return this.ordersRepo
+      .find({
+        where: {
+          source: OrderSource.WAITER,
+          paymentStatus: PaymentStatus.UNPAID,
+          createdAt: Between(this.startOfToday(), this.endOfToday()),
+        },
+        relations: { items: true, createdBy: true },
+        order: { createdAt: 'DESC' },
       })
       .then((orders) => this.sanitizeOrders(orders));
   }
@@ -200,9 +255,12 @@ export class OrdersService {
   async todaySummary() {
     const orders = await this.findToday();
     const active = orders.filter((o) => o.status !== OrderStatus.CANCELLED);
-    const revenue = active.reduce((sum, o) => sum + Number(o.total), 0);
+    const paid = active.filter((o) => o.paymentStatus !== PaymentStatus.UNPAID);
+    const revenue = paid.reduce((sum, o) => sum + Number(o.total), 0);
     return {
       orderCount: active.length,
+      unpaidCount: active.filter((o) => o.paymentStatus === PaymentStatus.UNPAID)
+        .length,
       revenue: Math.round(revenue * 100) / 100,
       orders,
     };
@@ -222,7 +280,12 @@ export class OrdersService {
         CANCELLED: 0,
       };
       for (const order of orders) {
-        counts[order.status] = (counts[order.status] || 0) + 1;
+        // Fold legacy READY into PREPARING for staff chips
+        const key =
+          order.status === OrderStatus.READY
+            ? OrderStatus.PREPARING
+            : order.status;
+        counts[key] = (counts[key] || 0) + 1;
       }
       return counts;
     };
@@ -234,14 +297,12 @@ export class OrdersService {
       online: {
         ...online,
         total: onlineToday.length,
-        active:
-          online.PENDING + online.PREPARING + online.READY,
+        active: online.PENDING + online.PREPARING,
       },
       today: {
         ...overall,
         total: allToday.length,
-        active:
-          overall.PENDING + overall.PREPARING + overall.READY,
+        active: overall.PENDING + overall.PREPARING,
       },
     };
   }
@@ -252,9 +313,49 @@ export class OrdersService {
       relations: { items: true, createdBy: true },
     });
     if (!order) throw new NotFoundException('Order not found');
-    order.status = dto.status;
+    const next = dto.status;
+    const allowed = [
+      OrderStatus.PENDING,
+      OrderStatus.PREPARING,
+      OrderStatus.COMPLETED,
+      OrderStatus.CANCELLED,
+    ];
+    if (!allowed.includes(next)) {
+      throw new BadRequestException(
+        'Status must be PENDING, PREPARING, COMPLETED, or CANCELLED',
+      );
+    }
+    order.status = next;
     const saved = await this.ordersRepo.save(order);
     return this.sanitizeOrder(saved);
+  }
+
+  async collectPayment(id: string, dto: PayOrderDto) {
+    const order = await this.ordersRepo.findOne({
+      where: { id },
+      relations: { items: true, createdBy: true },
+    });
+    if (!order) throw new NotFoundException('Order not found');
+    if (order.paymentStatus === PaymentStatus.PAID) {
+      throw new BadRequestException('Order is already paid');
+    }
+    if (order.status === OrderStatus.CANCELLED) {
+      throw new BadRequestException('Cannot collect payment on cancelled order');
+    }
+    order.paymentMethod = dto.paymentMethod;
+    order.paymentStatus = PaymentStatus.PAID;
+    const saved = await this.ordersRepo.save(order);
+    return this.sanitizeOrder(saved);
+  }
+
+  async remove(id: string) {
+    const order = await this.ordersRepo.findOne({
+      where: { id },
+      relations: { items: true },
+    });
+    if (!order) throw new NotFoundException('Order not found');
+    await this.ordersRepo.remove(order);
+    return { ok: true, id };
   }
 
   private sanitizeOrder<T extends Order | null>(order: T): T {

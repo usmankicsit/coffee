@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { OrderStatus } from '../common/enums';
+import { OrderSource, OrderStatus } from '../common/enums';
 import { Order } from '../orders/order.entity';
 import { CreateReviewDto } from './dto/review.dto';
 import { ProductReview } from './product-review.entity';
@@ -29,9 +29,14 @@ export class ReviewsService {
     if (order.createdById !== userId) {
       throw new ForbiddenException('Not your order');
     }
-    if (order.status !== OrderStatus.COMPLETED && order.status !== OrderStatus.READY) {
+    if (order.source !== OrderSource.ONLINE) {
       throw new BadRequestException(
-        'You can review products after the order is ready or completed',
+        'Only online orders can receive ratings and reviews',
+      );
+    }
+    if (order.status !== OrderStatus.COMPLETED) {
+      throw new BadRequestException(
+        'You can review products only after the order is completed',
       );
     }
     const inOrder = (order.items || []).some((i) => i.productId === dto.productId);

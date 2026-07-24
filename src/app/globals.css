@@ -27,6 +27,7 @@ body {
   margin: 0;
   padding: 0;
   min-height: 100%;
+  color-scheme: dark;
   background:
     radial-gradient(ellipse 80% 50% at 10% -10%, rgba(196, 120, 58, 0.22), transparent),
     radial-gradient(ellipse 60% 40% at 100% 0%, rgba(90, 60, 40, 0.35), transparent),
@@ -246,6 +247,13 @@ button {
   overflow: auto;
   flex: 1;
   min-height: 0;
+}
+
+.main:has(.waiter-page) {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 0.75rem 1rem 0.85rem;
 }
 
 .page-stack {
@@ -486,6 +494,35 @@ button {
   justify-content: flex-end;
   gap: 0.5rem;
   max-width: min(100%, 520px);
+  position: relative;
+}
+
+.pos-hw-menu {
+  position: relative;
+}
+
+.pos-hw-toggle {
+  gap: 0.4rem;
+}
+
+.pos-hw-dropdown {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  z-index: 40;
+  min-width: 220px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  padding: 0.75rem;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.35);
+}
+
+.pos-pref-inline {
+  margin: 0;
 }
 
 .printer-status {
@@ -536,7 +573,9 @@ button {
 }
 
 .btn:hover {
-  background: #403328;
+  background: rgba(232, 196, 160, 0.12);
+  border-color: rgba(232, 196, 160, 0.4);
+  color: var(--text);
 }
 
 .btn:active {
@@ -552,12 +591,20 @@ button {
 
 .btn-primary:hover {
   background: var(--accent-hover);
+  border-color: transparent;
+  color: #1a120c;
 }
 
 .btn-danger {
   background: rgba(196, 92, 74, 0.2);
   border-color: var(--danger);
   color: #f0c4bc;
+}
+
+.btn-danger:hover {
+  background: rgba(196, 92, 74, 0.35);
+  border-color: var(--danger);
+  color: #ffe0da;
 }
 
 .btn:disabled {
@@ -635,11 +682,19 @@ button {
 .form-row input,
 .form-row select,
 .form-row textarea {
-  background: var(--bg);
+  width: 100%;
+  background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 8px;
   color: var(--text);
   padding: 0.65rem 0.75rem;
+  color-scheme: dark;
+}
+
+.form-row input::placeholder,
+.form-row textarea::placeholder {
+  color: var(--muted);
+  opacity: 0.85;
 }
 
 .form-row input:focus,
@@ -647,6 +702,26 @@ button {
 .form-row textarea:focus {
   outline: 2px solid var(--accent-soft);
   border-color: var(--accent);
+}
+
+.form-row input[type='date'],
+.form-row input.theme-date,
+input.theme-date,
+.inline-date input[type='date'] {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  color-scheme: dark;
+  min-height: 2.45rem;
+}
+
+.form-row input[type='date']::-webkit-calendar-picker-indicator,
+input.theme-date::-webkit-calendar-picker-indicator,
+.inline-date input[type='date']::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  opacity: 0.85;
+  filter: invert(0.85) sepia(0.35) saturate(2) hue-rotate(350deg);
 }
 
 .form-row input:disabled,
@@ -657,6 +732,25 @@ button {
   background: #1a1410;
   color: var(--muted);
   border-color: #3a2f26;
+}
+
+.patti-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.85rem;
+}
+
+.patti-form-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-top: 0.25rem;
+}
+
+@media (max-width: 720px) {
+  .patti-form-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .error {
@@ -1132,6 +1226,7 @@ button {
   aspect-ratio: 4 / 3;
   object-fit: cover;
   background: #2a2018;
+  content-visibility: auto;
 }
 
 .product-tile-media {
@@ -1406,6 +1501,8 @@ button {
   overflow-x: hidden;
   display: flex;
   flex-direction: column;
+  justify-content: flex-start;
+  align-content: flex-start;
   gap: 0.65rem;
   margin-bottom: 0.85rem;
   padding-right: 0.15rem;
@@ -1429,10 +1526,136 @@ button {
 
 .cart-line {
   display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 0.35rem;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.5rem;
+  align-items: start;
+  flex: 0 0 auto;
   padding-bottom: 0.65rem;
   border-bottom: 1px solid var(--border);
+}
+
+.cart-line-info {
+  min-width: 0;
+}
+
+.cart-line-info strong {
+  display: block;
+  font-size: 0.92rem;
+  line-height: 1.3;
+  word-break: break-word;
+}
+
+.cart-line-price {
+  flex-shrink: 0;
+  white-space: nowrap;
+  font-weight: 600;
+  padding-top: 0.1rem;
+}
+
+.waiter-page {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 100%;
+  max-height: 100%;
+  overflow: hidden;
+}
+
+.waiter-page-header {
+  flex-shrink: 0;
+  margin-bottom: 0.45rem;
+}
+
+.waiter-page-header h1 {
+  margin: 0 0 0.1rem;
+  font-size: 1.45rem;
+}
+
+.waiter-page-header p {
+  margin: 0;
+  font-size: 0.85rem;
+}
+
+.waiter-page .success-banner,
+.waiter-page .error {
+  flex-shrink: 0;
+  margin-bottom: 0.45rem;
+  padding: 0.55rem 0.75rem;
+  font-size: 0.9rem;
+}
+
+.waiter-layout {
+  flex: 1 1 auto;
+  min-height: 0 !important;
+  height: 100% !important;
+  max-height: 100% !important;
+  gap: 0.85rem;
+  grid-template-columns: 1fr minmax(280px, 320px);
+}
+
+.waiter-cart-panel {
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  max-height: 100%;
+  overflow: hidden;
+  padding: 0.85rem;
+}
+
+.waiter-cart-panel h2 {
+  margin: 0 0 0.5rem;
+  font-size: 1.15rem;
+}
+
+.waiter-cart-meta {
+  flex-shrink: 0;
+  display: grid;
+  gap: 0.35rem;
+  margin-bottom: 0.5rem;
+}
+
+.waiter-cart-meta .form-row {
+  margin: 0;
+}
+
+.waiter-cart-meta label {
+  font-size: 0.75rem;
+  margin-bottom: 0.15rem;
+}
+
+.waiter-cart-meta input {
+  padding: 0.4rem 0.55rem;
+  font-size: 0.9rem;
+}
+
+.waiter-cart-items {
+  flex: 1 1 auto;
+  min-height: 0;
+  margin-bottom: 0.5rem;
+}
+
+.waiter-cart-footer {
+  gap: 0.45rem;
+  padding-top: 0.55rem;
+}
+
+.waiter-cart-footer .btn-pay {
+  min-height: 2.6rem;
+  font-size: 0.95rem;
+}
+
+.waiter-cart-footer-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.waiter-cart-footer-row .muted-note {
+  margin: 0;
+  font-size: 0.75rem;
+  line-height: 1.25;
 }
 
 .qty {
@@ -1527,8 +1750,15 @@ button {
   color: var(--muted);
 }
 
-.inline-date input[type='date'] {
-  padding: 0.35rem 0.5rem;
+.inline-date input[type='date'],
+.inline-date input.theme-date {
+  padding: 0.4rem 0.55rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  color-scheme: dark;
+  min-height: 2.15rem;
 }
 
 .empty {
@@ -1565,14 +1795,30 @@ button {
   transition: background 0.15s, border-color 0.15s, color 0.15s, transform 0.1s;
 }
 
+.icon-btn-labeled {
+  width: auto;
+  height: auto;
+  min-height: 2.15rem;
+  padding: 0.35rem 0.65rem;
+  gap: 0.35rem;
+}
+
+.icon-btn-text {
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  line-height: 1;
+}
+
 .icon-btn svg {
   width: 1.05rem;
   height: 1.05rem;
 }
 
 .icon-btn:hover {
-  background: #403328;
-  border-color: rgba(232, 196, 160, 0.35);
+  background: rgba(232, 196, 160, 0.16);
+  border-color: rgba(232, 196, 160, 0.45);
+  color: var(--text);
 }
 
 .icon-btn:active {
@@ -1618,6 +1864,7 @@ button {
 .icon-btn-success:hover {
   background: rgba(111, 158, 106, 0.35);
   border-color: rgba(111, 158, 106, 0.7);
+  color: #dff5dc;
 }
 
 .stack-gap {
@@ -1814,6 +2061,33 @@ button {
     grid-template-columns: 1fr;
     height: auto;
     max-height: none;
+  }
+
+  .waiter-page {
+    height: auto;
+    max-height: none;
+    overflow: visible;
+  }
+
+  .main:has(.waiter-page) {
+    overflow: auto;
+    height: auto;
+  }
+
+  .waiter-layout {
+    height: auto !important;
+    max-height: none !important;
+    grid-template-columns: 1fr;
+  }
+
+  .waiter-cart-panel {
+    height: auto;
+    max-height: none;
+  }
+
+  .waiter-cart-items {
+    min-height: 180px;
+    max-height: 40vh;
   }
 
   .pos-menu-panel {

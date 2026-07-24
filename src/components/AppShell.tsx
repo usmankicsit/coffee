@@ -10,10 +10,16 @@ import type { ShopSettings } from '@/lib/types';
 
 const staffLinks = [
   { href: '/pos', label: 'POS' },
+  { href: '/waiter-orders', label: 'Waiter orders' },
   { href: '/orders', label: 'Orders' },
   { href: '/online-orders', label: 'Online Orders' },
   { href: '/claims', label: 'Claims' },
   { href: '/expenses', label: 'Patti cash' },
+];
+
+const waiterLinks = [
+  { href: '/waiter', label: 'Take order' },
+  { href: '/orders', label: 'My orders' },
 ];
 
 const adminLinks = [
@@ -52,7 +58,8 @@ const emptyBucket = (): StatusBucket => ({
 });
 
 export function AppShell({ children }: { children: React.ReactNode }) {
-  const { user, loading, logout, isAdmin, isStaff, isCustomer } = useAuth();
+  const { user, loading, logout, isAdmin, isStaff, isCustomer, isWaiter } =
+    useAuth();
   const pathname = usePathname();
   const router = useRouter();
   const [counts, setCounts] = useState<StatusCounts>({
@@ -85,9 +92,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       return;
     }
     if (!isAdmin && pathname.startsWith('/admin')) {
-      router.replace('/pos');
+      router.replace(isWaiter ? '/waiter' : '/pos');
     }
-  }, [loading, user, isAdmin, isCustomer, pathname, router]);
+    if (isWaiter && (pathname === '/pos' || pathname.startsWith('/online-orders') || pathname.startsWith('/claims') || pathname.startsWith('/expenses') || pathname.startsWith('/waiter-orders'))) {
+      router.replace('/waiter');
+    }
+  }, [loading, user, isAdmin, isCustomer, isWaiter, pathname, router]);
 
   useEffect(() => {
     if (!isStaff) return;
@@ -106,16 +116,28 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     );
   }
 
-  const links = isAdmin ? [...staffLinks, ...adminLinks] : staffLinks;
+  const links = isWaiter
+    ? waiterLinks
+    : isAdmin
+      ? [...staffLinks, ...adminLinks]
+      : staffLinks;
   const online = counts.online;
   const brand = shop?.name || 'The Brewing Cottage';
   const logo =
     mediaUrl(shop?.logoUrl) || '/brand/brewing-cottage-logo.png';
 
+  const roleLabel =
+    user.role === 'SUPER_ADMIN'
+      ? 'Super Admin'
+      : user.role === 'ADMIN'
+        ? 'Admin'
+        : user.role === 'WAITER'
+          ? 'Waiter'
+          : 'Cashier';
+
   const chips = [
     { key: 'PENDING', label: 'Pending', count: online.PENDING, href: '/online-orders' },
     { key: 'PREPARING', label: 'Preparing', count: online.PREPARING, href: '/online-orders' },
-    { key: 'READY', label: 'Ready', count: online.READY, href: '/online-orders' },
     { key: 'COMPLETED', label: 'Completed', count: online.COMPLETED, href: '/online-orders' },
   ];
 
@@ -127,7 +149,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <img src={logo} alt={brand} className="brand-logo" />
           <div className="brand-text">
             {brand}
-            <span>Point of Sale</span>
+            <span>{isWaiter ? 'Waiter order' : 'Point of Sale'}</span>
           </div>
         </div>
         <nav className="nav">
@@ -143,7 +165,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </nav>
         <div className="user-chip">
           <strong>{user.name}</strong>
-          <small>{user.role === 'SUPER_ADMIN' ? 'Super Admin' : 'Cashier'}</small>
+          <small>{roleLabel}</small>
           <button
             className="btn"
             style={{ marginTop: '0.75rem', width: '100%' }}
@@ -157,24 +179,26 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
       </aside>
       <div className="shell-content">
-        <header className="top-navbar">
-          <div className="top-navbar-label">
-            <strong>Online orders today</strong>
-            <span>{online.active} active · {online.total} total</span>
-          </div>
-          <div className="status-chips">
-            {chips.map((chip) => (
-              <Link
-                key={chip.key}
-                href={chip.href}
-                className={`status-chip status-chip-${chip.key}${chip.count > 0 ? ' has-count' : ''}`}
-              >
-                <span className="status-chip-count">{chip.count}</span>
-                <span className="status-chip-label">{chip.label}</span>
-              </Link>
-            ))}
-          </div>
-        </header>
+        {!isWaiter && (
+          <header className="top-navbar">
+            <div className="top-navbar-label">
+              <strong>Online orders today</strong>
+              <span>{online.active} active · {online.total} total</span>
+            </div>
+            <div className="status-chips">
+              {chips.map((chip) => (
+                <Link
+                  key={chip.key}
+                  href={chip.href}
+                  className={`status-chip status-chip-${chip.key}${chip.count > 0 ? ' has-count' : ''}`}
+                >
+                  <span className="status-chip-count">{chip.count}</span>
+                  <span className="status-chip-label">{chip.label}</span>
+                </Link>
+              ))}
+            </div>
+          </header>
+        )}
         <main className="main">{children}</main>
       </div>
     </div>

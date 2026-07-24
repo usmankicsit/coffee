@@ -79,7 +79,6 @@ export default function MyOrdersPage() {
                 { value: 'ALL', label: 'All statuses' },
                 { value: 'PENDING', label: 'Pending' },
                 { value: 'PREPARING', label: 'Preparing' },
-                { value: 'READY', label: 'Ready' },
                 { value: 'COMPLETED', label: 'Completed' },
                 { value: 'CANCELLED', label: 'Cancelled' },
               ]}
@@ -112,8 +111,8 @@ export default function MyOrdersPage() {
                     </td>
                     <td>{money(order.total, shop?.currency)}</td>
                     <td>
-                      <span className={`badge badge-${order.status}`}>
-                        {order.status}
+                      <span className={`badge badge-${order.status === 'READY' ? 'PREPARING' : order.status}`}>
+                        {order.status === 'READY' ? 'PREPARING' : order.status}
                       </span>
                     </td>
                     <td>

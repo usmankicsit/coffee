@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Patch,
@@ -12,7 +13,11 @@ import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { Roles } from '../common/decorators/roles.decorator';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
-import { CreateOrderDto, UpdateOrderStatusDto } from './dto/order.dto';
+import {
+  CreateOrderDto,
+  PayOrderDto,
+  UpdateOrderStatusDto,
+} from './dto/order.dto';
 import { OrdersService } from './orders.service';
 
 @Controller('orders')
@@ -21,6 +26,13 @@ export class OrdersController {
   constructor(private readonly ordersService: OrdersService) {}
 
   @Post()
+  @Roles(
+    UserRole.SUPER_ADMIN,
+    UserRole.ADMIN,
+    UserRole.CASHIER,
+    UserRole.WAITER,
+    UserRole.CUSTOMER,
+  )
   create(
     @Body() dto: CreateOrderDto,
     @CurrentUser() user: { id: string; role: UserRole },
@@ -46,20 +58,26 @@ export class OrdersController {
     return this.ordersService.findOnlineToday();
   }
 
+  @Get('waiter/unpaid')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.CASHIER, UserRole.WAITER)
+  unpaidWaiter() {
+    return this.ordersService.findUnpaidWaiterToday();
+  }
+
   @Get('today')
-  @Roles(UserRole.SUPER_ADMIN, UserRole.CASHIER)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.CASHIER, UserRole.WAITER)
   today() {
     return this.ordersService.findToday();
   }
 
   @Get('today/summary')
-  @Roles(UserRole.SUPER_ADMIN, UserRole.CASHIER)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.CASHIER, UserRole.WAITER)
   todaySummary() {
     return this.ordersService.todaySummary();
   }
 
   @Get('status-counts')
-  @Roles(UserRole.SUPER_ADMIN, UserRole.CASHIER)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.CASHIER, UserRole.WAITER)
   statusCounts() {
     return this.ordersService.statusCounts();
   }
@@ -82,5 +100,17 @@ export class OrdersController {
   @Roles(UserRole.SUPER_ADMIN, UserRole.CASHIER)
   updateStatus(@Param('id') id: string, @Body() dto: UpdateOrderStatusDto) {
     return this.ordersService.updateStatus(id, dto);
+  }
+
+  @Patch(':id/pay')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.CASHIER)
+  collectPayment(@Param('id') id: string, @Body() dto: PayOrderDto) {
+    return this.ordersService.collectPayment(id, dto);
+  }
+
+  @Delete(':id')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
+  remove(@Param('id') id: string) {
+    return this.ordersService.remove(id);
   }
 }

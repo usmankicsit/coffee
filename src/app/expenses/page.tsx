@@ -160,20 +160,22 @@ export default function ExpensesPage() {
         {error && <div className="error">{error}</div>}
         {ok && <div className="success-banner">{ok}</div>}
 
-        <form className="card-panel form-grid" onSubmit={onSubmit}>
-          <div className="form-grid" style={{ gridTemplateColumns: '1fr 1fr' }}>
-            <label>
-              Title
+        <form className="card-panel form-grid patti-form" onSubmit={onSubmit}>
+          <div className="patti-form-grid">
+            <div className="form-row">
+              <label htmlFor="patti-title">Title</label>
               <input
+                id="patti-title"
                 required
                 value={form.title}
                 onChange={(e) => setForm({ ...form, title: e.target.value })}
                 placeholder="e.g. Milk, Gas, Cleaning"
               />
-            </label>
-            <label>
-              Amount ({currency})
+            </div>
+            <div className="form-row">
+              <label htmlFor="patti-amount">Amount ({currency})</label>
               <input
+                id="patti-amount"
                 required
                 type="number"
                 min="0.01"
@@ -182,28 +184,31 @@ export default function ExpensesPage() {
                 onChange={(e) => setForm({ ...form, amount: e.target.value })}
                 placeholder="0"
               />
-            </label>
-            <label>
-              Expense date
+            </div>
+            <div className="form-row">
+              <label htmlFor="patti-date">Expense date</label>
               <input
+                id="patti-date"
                 required
                 type="date"
+                className="theme-date"
                 value={form.expenseDate}
                 onChange={(e) =>
                   setForm({ ...form, expenseDate: e.target.value })
                 }
               />
-            </label>
-            <label>
-              Note (optional)
+            </div>
+            <div className="form-row">
+              <label htmlFor="patti-note">Note (optional)</label>
               <input
+                id="patti-note"
                 value={form.note}
                 onChange={(e) => setForm({ ...form, note: e.target.value })}
                 placeholder="Vendor, receipt no., etc."
               />
-            </label>
+            </div>
           </div>
-          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+          <div className="patti-form-actions">
             <button className="btn btn-primary" type="submit" disabled={busy}>
               {editingId ? 'Update expense' : 'Add patti cash'}
             </button>
@@ -225,6 +230,7 @@ export default function ExpensesPage() {
               From
               <input
                 type="date"
+                className="theme-date"
                 value={from}
                 onChange={(e) => {
                   setFrom(e.target.value);
@@ -236,6 +242,7 @@ export default function ExpensesPage() {
               To
               <input
                 type="date"
+                className="theme-date"
                 value={to}
                 onChange={(e) => {
                   setTo(e.target.value);

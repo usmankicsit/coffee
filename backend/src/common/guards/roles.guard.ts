@@ -7,6 +7,15 @@ import { Reflector } from '@nestjs/core';
 import { ROLES_KEY } from '../decorators/roles.decorator';
 import { UserRole } from '../enums';
 
+/** ADMIN can use any route that requires SUPER_ADMIN. */
+function roleMatches(userRole: UserRole, required: UserRole) {
+  if (userRole === required) return true;
+  if (required === UserRole.SUPER_ADMIN && userRole === UserRole.ADMIN) {
+    return true;
+  }
+  return false;
+}
+
 @Injectable()
 export class RolesGuard implements CanActivate {
   constructor(private reflector: Reflector) {}
@@ -20,6 +29,8 @@ export class RolesGuard implements CanActivate {
       return true;
     }
     const { user } = context.switchToHttp().getRequest();
-    return requiredRoles.includes(user?.role);
+    const role = user?.role as UserRole | undefined;
+    if (!role) return false;
+    return requiredRoles.some((r) => roleMatches(role, r));
   }
 }
