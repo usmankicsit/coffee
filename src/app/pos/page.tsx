@@ -222,6 +222,52 @@ function PosPageInner() {
     }
   }
 
+  /** Kitchen ticket from current cart (or open waiter order). */
+  function draftKitchenOrder(): Order | null {
+    if (pendingWaiterOrder) return pendingWaiterOrder;
+    if (!cart.length) return null;
+    return {
+      id: 'pos-cart-draft',
+      orderNumber: 'CART',
+      status: 'PENDING',
+      source: 'POS',
+      paymentMethod: null,
+      paymentStatus: 'UNPAID',
+      subtotal,
+      tax,
+      total,
+      note: null,
+      createdById: '',
+      items: cart.map((line, index) => ({
+        id: `draft-${index}`,
+        productId: line.product.id,
+        productName: line.product.name,
+        quantity: line.quantity,
+        unitPrice: line.product.price,
+        lineTotal: Number(line.product.price) * line.quantity,
+      })),
+      createdAt: new Date().toISOString(),
+    };
+  }
+
+  async function printKitchenFromCart() {
+    const order = draftKitchenOrder() || lastOrder;
+    if (!order) return;
+    setPrinterMsg('');
+    try {
+      await printKitchenTicket(order, shop);
+      setPrinterMsg(
+        order.id === 'pos-cart-draft'
+          ? 'Kitchen ticket printed for current cart.'
+          : `Kitchen slip printed for ${order.orderNumber}.`,
+      );
+    } catch (err) {
+      setPrinterMsg(
+        err instanceof Error ? err.message : 'Kitchen print failed',
+      );
+    }
+  }
+
   async function handleConnectPrinter() {
     setPrinterMsg('');
     try {
@@ -399,6 +445,7 @@ function PosPageInner() {
 
   return (
     <AppShell>
+      <div className="pos-page">
       <div className="page-header">
         <div>
           <h1>Point of Sale</h1>
@@ -666,7 +713,7 @@ function PosPageInner() {
           />
           */}
         </section>
-        <aside className="cart-panel">
+        <aside className="cart-panel waiter-cart-panel pos-cart-panel">
           <h2>{pendingWaiterOrder ? 'Waiter order' : 'Cart'}</h2>
           {pendingWaiterOrder && (
             <div className="success-banner" style={{ marginBottom: '0.65rem' }}>
@@ -674,8 +721,8 @@ function PosPageInner() {
               {pendingWaiterOrder.note || 'Table'} · UNPAID
             </div>
           )}
-          <div className="cart-items">
-            {!cart.length && <p className="empty">Cart is empty</p>}
+          <div className="cart-items waiter-cart-items">
+            {!cart.length && <p className="empty">Tap items to add</p>}
             {cart.map((line) => (
               <div className="cart-line" key={line.product.id}>
                 <div className="cart-line-info">
@@ -715,7 +762,7 @@ function PosPageInner() {
               </div>
             ))}
           </div>
-          <div className="cart-footer">
+          <div className="cart-footer waiter-cart-footer">
             <div className="cart-totals">
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span>Subtotal</span>
@@ -730,16 +777,21 @@ function PosPageInner() {
                 <span>{money(total, shop?.currency)}</span>
               </div>
             </div>
-            {pendingWaiterOrder && (
-              <button
-                className="btn btn-primary"
-                type="button"
-                style={{ width: '100%' }}
-                onClick={() => void printKitchenForPending()}
-              >
-                Print kitchen
-              </button>
-            )}
+            <button
+              className="btn btn-primary"
+              type="button"
+              style={{ width: '100%' }}
+              disabled={
+                (!cart.length && !pendingWaiterOrder && !lastOrder) || busy
+              }
+              onClick={() =>
+                void (pendingWaiterOrder
+                  ? printKitchenForPending()
+                  : printKitchenFromCart())
+              }
+            >
+              Print kitchen
+            </button>
             <div className="pay-row">
               <button
                 className="btn btn-pay btn-pay-cash"
@@ -764,15 +816,19 @@ function PosPageInner() {
                 {money(lastOrder.total, shop?.currency)}
               </p>
             )}
-            <button
-              className="btn"
-              disabled={(!cart.length && !pendingWaiterOrder) || busy}
-              onClick={clearCart}
-            >
-              {pendingWaiterOrder ? 'Dismiss' : 'Clear cart'}
-            </button>
+            <div className="waiter-cart-footer-row">
+              <p className="muted-note">Print kitchen anytime before or after pay</p>
+              <button
+                className="btn"
+                disabled={(!cart.length && !pendingWaiterOrder) || busy}
+                onClick={clearCart}
+              >
+                {pendingWaiterOrder ? 'Dismiss' : 'Clear'}
+              </button>
+            </div>
           </div>
         </aside>
+      </div>
       </div>
     </AppShell>
   );

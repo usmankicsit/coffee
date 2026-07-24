@@ -27,6 +27,8 @@ body {
   margin: 0;
   padding: 0;
   min-height: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
   color-scheme: dark;
   background:
     radial-gradient(ellipse 80% 50% at 10% -10%, rgba(196, 120, 58, 0.22), transparent),
@@ -57,13 +59,17 @@ button {
   grid-template-columns: 240px 1fr;
   height: 100vh;
   max-height: 100vh;
+  width: 100%;
+  max-width: 100vw;
   overflow: hidden;
+  overflow-x: hidden;
 }
 
 .shell-content {
   display: flex;
   flex-direction: column;
   min-width: 0;
+  width: 100%;
   height: 100vh;
   max-height: 100vh;
   overflow: hidden;
@@ -245,15 +251,31 @@ button {
 .main {
   padding: 1.25rem 1.5rem 1.5rem;
   overflow: auto;
+  overflow-x: hidden;
   flex: 1;
   min-height: 0;
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
 }
 
-.main:has(.waiter-page) {
+.main:has(.waiter-page),
+.main:has(.pos-layout),
+.main:has(.pos-page) {
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  overflow-x: hidden;
   padding: 0.75rem 1rem 0.85rem;
+}
+
+.pos-page {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: hidden;
 }
 
 .page-stack {
@@ -471,20 +493,31 @@ button {
   align-items: flex-end;
   justify-content: space-between;
   gap: 1rem;
-  margin-bottom: 0;
+  margin-bottom: 0.75rem;
   flex-shrink: 0;
+  flex-wrap: wrap;
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
+}
+
+.page-header > div:first-child {
+  min-width: 0;
+  flex: 1 1 200px;
 }
 
 .page-header h1 {
   margin: 0;
   font-family: var(--font-display);
-  font-size: 2rem;
+  font-size: clamp(1.35rem, 2.5vw, 2rem);
   font-weight: 600;
+  word-break: break-word;
 }
 
 .page-header p {
   margin: 0.35rem 0 0;
   color: var(--muted);
+  font-size: 0.9rem;
 }
 
 .pos-hardware-bar {
@@ -493,8 +526,10 @@ button {
   align-items: center;
   justify-content: flex-end;
   gap: 0.5rem;
-  max-width: min(100%, 520px);
+  max-width: 100%;
+  flex: 1 1 220px;
   position: relative;
+  min-width: 0;
 }
 
 .pos-hw-menu {
@@ -1128,18 +1163,22 @@ input.theme-date::-webkit-calendar-picker-indicator,
 /* POS */
 .pos-layout {
   display: grid;
-  grid-template-columns: 1fr 340px;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 340px);
   gap: 1.25rem;
   align-items: start;
   min-height: 0;
-  /* height: calc(100vh - 10.5rem); */
-  /* max-height: calc(100vh - 10.5rem); */
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
 }
 
 .pos-menu-panel {
   display: flex;
   flex-direction: column;
   min-height: 0;
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
   background: var(--bg-panel);
   border: 1px solid var(--border);
   border-radius: var(--radius);
@@ -1149,11 +1188,14 @@ input.theme-date::-webkit-calendar-picker-indicator,
 .pos-menu-toolbar {
   padding: 0.85rem 1rem 0.35rem;
   flex-shrink: 0;
+  min-width: 0;
 }
 
 .pos-menu-toolbar .list-search {
   width: 100%;
+  max-width: 100%;
   display: block;
+  box-sizing: border-box;
 }
 
 .pos-menu-panel .category-tabs {
@@ -1162,16 +1204,22 @@ input.theme-date::-webkit-calendar-picker-indicator,
   flex-shrink: 0;
   flex-wrap: nowrap;
   overflow-x: auto;
+  overflow-y: hidden;
   -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
   scrollbar-width: thin;
   gap: 0.35rem;
+  max-width: 100%;
 }
 
 .pos-product-scroll {
   flex: 1;
   min-height: 0;
+  min-width: 0;
   overflow: auto;
+  overflow-x: hidden;
   padding: 0 1rem 0.75rem;
+  max-width: 100%;
 }
 
 .pos-menu-panel .pagination-bar {
@@ -1208,8 +1256,10 @@ input.theme-date::-webkit-calendar-picker-indicator,
 
 .product-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(140px, 100%), 1fr));
   gap: 0.75rem;
+  width: 100%;
+  max-width: 100%;
 }
 
 .product-tile {
@@ -1491,9 +1541,16 @@ input.theme-date::-webkit-calendar-picker-indicator,
   display: flex;
   flex-direction: column;
   min-height: 0;
-  height: 100%;
-  max-height: 100%;
-  overflow: hidden;
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+  max-height: none;
+  overflow: visible;
+  position: sticky;
+  top: 0.75rem;
+  align-self: start;
+  box-sizing: border-box;
 }
 
 .cart-panel h2 {
@@ -1504,8 +1561,9 @@ input.theme-date::-webkit-calendar-picker-indicator,
 }
 
 .cart-items {
-  flex: 1 1 auto;
-  min-height: 0;
+  flex: 0 1 auto;
+  min-height: 120px;
+  max-height: min(42vh, 360px);
   overflow-y: auto;
   overflow-x: hidden;
   display: flex;
@@ -1597,18 +1655,21 @@ input.theme-date::-webkit-calendar-picker-indicator,
 .waiter-layout {
   flex: 1 1 auto;
   min-height: 0 !important;
-  /* height: 100% !important; */
-  /* max-height: 100% !important; */
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
   gap: 0.85rem;
-  grid-template-columns: 1fr minmax(280px, 320px);
+  grid-template-columns: minmax(0, 1fr) minmax(240px, 320px);
 }
 
 .waiter-cart-panel {
   min-width: 0;
   min-height: 0;
-  height: 100%;
-  max-height: 100%;
-  overflow: hidden;
+  /* height: 100%; */
+  /* max-height: 100%; */
+  height: auto;
+  max-height: none;
+  overflow: visible;
   padding: 0.85rem;
 }
 
@@ -1639,9 +1700,25 @@ input.theme-date::-webkit-calendar-picker-indicator,
 }
 
 .waiter-cart-items {
-  flex: 1 1 auto;
-  min-height: 0;
+  flex: 0 1 auto;
+  min-height: 120px;
+  max-height: min(42vh, 360px);
   margin-bottom: 0.5rem;
+}
+
+.pos-cart-panel .waiter-cart-footer {
+  gap: 0.5rem;
+}
+
+.pos-cart-panel .pay-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+
+.pos-cart-panel .btn-pay {
+  min-height: 2.6rem;
+  font-size: 0.95rem;
 }
 
 .waiter-cart-footer {
@@ -2026,59 +2103,204 @@ input.theme-date::-webkit-calendar-picker-indicator,
   margin: 0 auto;
 }
 
+@media (max-width: 1100px) {
+  .pos-layout,
+  .waiter-layout {
+    grid-template-columns: 1fr;
+    gap: 0.85rem;
+  }
+
+  .cart-panel,
+  .waiter-cart-panel,
+  .pos-cart-panel {
+    position: static;
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .product-grid {
+    grid-template-columns: repeat(auto-fill, minmax(min(124px, 100%), 1fr));
+  }
+}
+
 @media (max-width: 960px) {
   .app-shell {
     grid-template-columns: 1fr;
     height: auto;
     max-height: none;
     overflow: visible;
+    overflow-x: hidden;
   }
 
   .shell-content {
     height: auto;
     max-height: none;
     overflow: visible;
+    overflow-x: hidden;
+    width: 100%;
+    min-width: 0;
   }
 
   .sidebar {
     height: auto;
+    max-height: none;
     flex-direction: row;
     flex-wrap: wrap;
     align-items: center;
-    gap: 0.75rem;
+    gap: 0.65rem;
+    padding: 0.75rem;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    overflow: visible;
+  }
+
+  .brand {
+    flex: 1 1 auto;
+    min-width: 0;
+    font-size: 1.15rem;
+    padding: 0;
+  }
+
+  .brand-logo {
+    width: 40px;
+    height: 40px;
+    flex-shrink: 0;
+  }
+
+  .brand-text {
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  .brand-text span {
+    display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .nav {
     flex-direction: row;
     flex-wrap: wrap;
     width: 100%;
+    max-width: 100%;
+    gap: 0.3rem;
+  }
+
+  .nav a {
+    padding: 0.45rem 0.65rem;
+    font-size: 0.85rem;
+  }
+
+  .user-chip {
+    width: 100%;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem 0.75rem;
+    padding: 0.65rem 0.75rem;
+  }
+
+  .user-chip .btn {
+    margin-top: 0 !important;
+    width: auto !important;
+    margin-left: auto;
   }
 
   .top-navbar {
-    padding: 0.75rem 1rem;
+    padding: 0.65rem 0.75rem;
+    gap: 0.5rem;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  .top-navbar-label {
+    min-width: 0;
+    flex: 1 1 140px;
+  }
+
+  .status-chips {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .status-chip {
+    padding: 0.3rem 0.55rem;
+    font-size: 0.8rem;
   }
 
   .main {
     overflow: visible;
+    overflow-x: hidden;
+    padding: 0.75rem;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  .main:has(.waiter-page),
+  .main:has(.pos-layout),
+  .main:has(.pos-page) {
+    overflow: visible;
+    overflow-x: hidden;
+    padding: 0.65rem 0.75rem 1rem;
   }
 
   .table-scroll {
     max-height: 60vh;
+    max-width: 100%;
+    overflow-x: auto;
   }
 
-  .pos-layout {
+  .page-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.65rem;
+    margin-bottom: 0.65rem;
+  }
+
+  .pos-hardware-bar {
+    justify-content: flex-start;
+    max-width: 100%;
+    width: 100%;
+  }
+
+  .pos-hw-dropdown {
+    left: 0;
+    right: auto;
+    max-width: calc(100vw - 2rem);
+  }
+
+  .pos-layout,
+  .waiter-layout {
     grid-template-columns: 1fr;
     height: auto;
     max-height: none;
+    width: 100%;
+    max-width: 100%;
+    gap: 0.75rem;
   }
 
   .pos-menu-panel {
+    max-height: none;
+    overflow: hidden;
+    width: 100%;
+  }
+
+  .pos-menu-toolbar {
+    padding: 0.65rem 0.65rem 0.25rem;
+  }
+
+  .pos-product-scroll {
+    padding: 0 0.65rem 0.65rem;
     max-height: none;
     overflow: visible;
   }
 
   .pos-menu-panel .category-tabs {
-    padding: 0.35rem 0.65rem 0.5rem;
+    padding: 0.3rem 0.65rem 0.5rem;
     gap: 0.3rem;
   }
 
@@ -2089,49 +2311,149 @@ input.theme-date::-webkit-calendar-picker-indicator,
   }
 
   .product-grid {
-    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
-    gap: 0.55rem;
+    grid-template-columns: repeat(auto-fill, minmax(min(108px, 100%), 1fr));
+    gap: 0.5rem;
   }
 
   .product-tile-body {
-    padding: 0.55rem;
+    padding: 0.5rem;
   }
 
   .product-tile-body strong {
-    font-size: 0.82rem;
+    font-size: 0.8rem;
   }
 
   .waiter-page {
     height: auto;
     max-height: none;
     overflow: visible;
+    width: 100%;
+    max-width: 100%;
   }
 
-  .main:has(.waiter-page) {
-    overflow: auto;
-    height: auto;
-  }
-
-  .waiter-layout {
-    height: auto !important;
-    max-height: none !important;
-    grid-template-columns: 1fr;
+  .waiter-page-header h1 {
+    font-size: 1.25rem;
   }
 
   .waiter-cart-panel {
     height: auto;
     max-height: none;
+    position: static;
+    width: 100%;
   }
 
-  .waiter-cart-items {
-    min-height: 180px;
-    max-height: 40vh;
+  .waiter-cart-items,
+  .cart-items {
+    min-height: 100px;
+    max-height: min(36vh, 280px);
   }
 
   .cart-panel {
     position: static;
     height: auto;
     max-height: none;
+    padding: 0.85rem;
+    width: 100%;
+  }
+
+  .cart-footer,
+  .waiter-cart-footer {
+    gap: 0.45rem;
+  }
+
+  .pay-row,
+  .pos-cart-panel .pay-row {
+    grid-template-columns: 1fr 1fr;
+    gap: 0.4rem;
+    margin-bottom: 0;
+  }
+
+  .btn-pay,
+  .pos-cart-panel .btn-pay {
+    min-height: 2.5rem;
+    font-size: 0.9rem;
+  }
+
+  .success-banner,
+  .error {
+    word-break: break-word;
+    overflow-wrap: anywhere;
+    max-width: 100%;
+  }
+
+  .success-banner button,
+  .success-banner .btn {
+    display: inline-flex;
+    margin: 0.35rem 0.35rem 0 0;
+  }
+
+  .pwa-install-banner {
+    left: 0.5rem;
+    right: 0.5rem;
+    bottom: 0.5rem;
+    width: auto;
+    max-width: calc(100vw - 1rem);
+    box-sizing: border-box;
+  }
+}
+
+@media (max-width: 640px) {
+  .sidebar {
+    padding: 0.6rem;
+  }
+
+  .nav a {
+    padding: 0.4rem 0.55rem;
+    font-size: 0.78rem;
+  }
+
+  .page-header h1 {
+    font-size: 1.25rem;
+  }
+
+  .pos-pref-inline {
+    width: 100%;
+  }
+
+  .product-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.45rem;
+  }
+
+  .product-tile-body {
+    padding: 0.4rem;
+    gap: 0.15rem;
+  }
+
+  .product-tile-body strong {
+    font-size: 0.75rem;
+    line-height: 1.2;
+  }
+
+  .product-tile-body span {
+    font-size: 0.72rem;
+  }
+
+  .pay-row,
+  .pos-cart-panel .pay-row {
+    grid-template-columns: 1fr;
+  }
+
+  .waiter-cart-footer-row {
+    flex-wrap: wrap;
+    gap: 0.4rem;
+  }
+
+  .waiter-cart-footer-row .muted-note {
+    flex: 1 1 100%;
+  }
+
+  .cart-line-info strong {
+    font-size: 0.85rem;
+  }
+
+  .inline-actions {
+    flex-wrap: wrap;
   }
 }
 
